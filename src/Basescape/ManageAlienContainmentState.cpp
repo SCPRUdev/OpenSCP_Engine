@@ -53,8 +53,7 @@ namespace OpenXcom
  * @param base Pointer to the base to get info from.
  * @param origin Game section that originated this state.
  */
-ManageAlienContainmentState::ManageAlienContainmentState(Base *base, int prisonType, OptionsOrigin origin) :
-	_base(base), _prisonType(prisonType), _origin(origin), _sel(0), _aliensSold(0), _total(0), _doNotReset(false), _threeButtons(false)
+ManageAlienContainmentState::ManageAlienContainmentState(Base* base, int prisonType, OptionsOrigin origin) : _base(base), _prisonType(prisonType), _origin(origin), _sel(0), _aliensSold(0), _total(0), _doNotReset(false), _threeButtons(false)
 {
 	_threeButtons = Options::canSellLiveAliens && Options::retainCorpses;
 
@@ -79,8 +78,8 @@ ManageAlienContainmentState::ManageAlienContainmentState(Base *base, int prisonT
 		_btnCleanup = new TextButton(148, 16, 8, 176);
 	}
 	_txtTitle = new Text(310, 17, 5, 8);
-	_txtAvailable =  new Text(190, 9, 10, 24);
-	_txtValueOfSales =  new Text(190, 9, 10, 32);
+	_txtAvailable = new Text(190, 9, 10, 24);
+	_txtValueOfSales = new Text(190, 9, 10, 32);
 	_txtUsed = new Text(110, 9, 136, 24);
 	_txtItem = new Text(120, 9, 10, 41);
 	_txtLiveAliens = new Text(54, 18, 153, 32);
@@ -149,9 +148,12 @@ ManageAlienContainmentState::ManageAlienContainmentState(Base *base, int prisonT
 	_txtInterrogatedAliens->setVerticalAlign(ALIGN_BOTTOM);
 
 	_lstAliens->setArrowColumn(184, ARROW_HORIZONTAL);
-	if (Options::canSellLiveAliens) {
+	if (Options::canSellLiveAliens)
+	{
 		_lstAliens->setColumns(5, 120, 40, 64, 46, 46);
-	} else {
+	}
+	else
+	{
 		_lstAliens->setColumns(5, 150, 10, 64, 46, 46);
 	}
 	_lstAliens->setSelectable(true);
@@ -169,6 +171,16 @@ ManageAlienContainmentState::ManageAlienContainmentState(Base *base, int prisonT
 	_timerInc->onTimer((StateHandler)&ManageAlienContainmentState::increase);
 	_timerDec = new Timer(250);
 	_timerDec->onTimer((StateHandler)&ManageAlienContainmentState::decrease);
+
+	if (!_game->getMod()->getNewBaseUnlockResearch().empty())
+	{
+		bool newBasesUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getNewBaseUnlockResearch(), true);
+		if (!newBasesUnlocked)
+		{
+			_btnSell->setVisible(false);
+			_btnTransfer->setVisible(false);
+		}
+	}
 }
 
 /**

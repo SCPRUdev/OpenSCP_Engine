@@ -406,6 +406,16 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 
 	_txtSlacking->setAlign(ALIGN_RIGHT);
 
+	if (!_game->getMod()->getNewBaseUnlockResearch().empty())
+	{
+		bool newBasesUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getNewBaseUnlockResearch(), true);
+		if (!newBasesUnlocked)
+		{
+			_txtFunds->setVisible(false);
+			_btnGraphs->setVisible(false);
+		}
+	}
+
 	if (Options::showFundsOnGeoscape)
 	{
 		_txtHour->setY(_txtHour->getY()+6);
@@ -577,7 +587,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-5"
 			if (action->getDetails()->key.keysym.sym == SDLK_5)
 			{
-				_txtDebug->setText(("STR_DEBUG_GIVEPRISONERS"));
+				_txtDebug->setText(tr("STR_DEBUG_GIVEPRISONERS"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					for (auto& itemType : _game->getMod()->getItemsList())
@@ -623,7 +633,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-a"
 			if (action->getDetails()->key.keysym.sym == SDLK_a)
 			{
-				_txtDebug->setText("STR_DEBUG_DELETEDIARIES"));
+				_txtDebug->setText(tr("STR_DEBUG_DELETEDIARIES"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					for (auto* soldier : *xbase->getSoldiers())
@@ -635,7 +645,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-c"
 			if (action->getDetails()->key.keysym.sym == SDLK_c)
 			{
-				_txtDebug->setText(("STR_DEBUG_DELETECOMMENDATIONS"));
+				_txtDebug->setText(tr("STR_DEBUG_DELETECOMMENDATIONS"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					for (auto* soldier : *xbase->getSoldiers())
