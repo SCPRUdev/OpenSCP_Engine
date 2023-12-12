@@ -244,6 +244,11 @@ void SellState::delayedInit()
 		{
 			qty = _debriefingState->getRecoveredItemCount(rule);
 		}
+		else if (!rule->getCanBeSoldNormally())
+		{
+			qty = 0;
+		}
+
 		else
 		{
 			qty = _base->getStorageItems()->getItem(rule);

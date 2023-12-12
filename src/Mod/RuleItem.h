@@ -353,7 +353,7 @@ private:
 	int _armor;
 	int _turretType;
 	int _aiUseDelay, _aiMeleeHitCount;
-	bool _recover, _recoverCorpse, _ignoreInBaseDefense, _ignoreInCraftEquip, _liveAlien; // _canBeSoldNormally; #12.12.2023 //
+	bool _recover, _recoverCorpse, _ignoreInBaseDefense, _ignoreInCraftEquip, _liveAlien, _canBeSoldNormally;
 	int _liveAlienPrisonType;
 	int _attraction;
 	RuleItemUseCost _flatUse, _flatThrow, _flatPrime, _flatUnprime;
@@ -792,7 +792,7 @@ public:
 	/// Returns to which type of prison does the live alien belong.
 	int getPrisonType() const;
 	/// Checks if this item can be sold via sell/sack menu.
-	/// bool getCanBeSoldNormally() const; #12.12.2023
+	bool getCanBeSoldNormally() const;
 
 	/// Should this weapon arc?
 	bool getArcingShot() const;
