@@ -96,6 +96,15 @@ int RuleDamageType::getRandomDamage(int power, FuncRef<int(int, int)> randFunc) 
 		return randFunc(min, max);
 	}
 
+	else if (randType == DRT_SCP)
+	{
+		int dmgRng = 100;
+		int min = power * (100 - dmgRng) / 100; // 0%
+		int max = power * (25 + dmgRng) / 100;  // 125%
+
+		return randFunc(min, max);
+	}
+
 	const bool def = randType == DRT_DEFAULT;
 	if (def)
 	{
