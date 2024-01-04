@@ -31,7 +31,7 @@ RuleDamageType::RuleDamageType() :
 	FixRadius(0), RandomType(DRT_STANDARD), ResistType(DT_NONE), FireBlastCalc(false),
 	IgnoreDirection(false), IgnoreSelfDestruct(false), IgnorePainImmunity(false), IgnoreNormalMoraleLose(false), IgnoreOverKill(false),
 	ArmorEffectiveness(1.0f), RadiusEffectiveness(0.0f), RadiusReduction(10.0f),
-	FireThreshold(1000), SmokeThreshold(1000),
+	FireThreshold(2000), SmokeThreshold(1000),
 	ToHealth(1.0f), ToMana(0.0f), ToArmor(0.1f), ToArmorPre(0.0f), ToWound(1.0f), ToItem(0.0f), ToTile(0.5f), ToStun(0.25f), ToEnergy(0.0f), ToTime(0.0f), ToMorale(0.0f),
 	RandomHealth(false), RandomMana(false), RandomArmor(false), RandomArmorPre(false), RandomWound(true), RandomItem(false), RandomTile(false), RandomStun(true), RandomEnergy(false), RandomTime(false), RandomMorale(false),
 	TileDamageMethod(1)
@@ -92,6 +92,15 @@ int RuleDamageType::getRandomDamage(int power, FuncRef<int(int, int)> randFunc) 
 	{
 		int min = power / 2; // 50%
 		int max = power * 2; // 200%
+
+		return randFunc(min, max);
+	}
+
+	else if (randType == DRT_SCP)
+	{
+		int dmgRng = 100;
+		int min = power * (100 - dmgRng) / 100; // 0%
+		int max = power * (25 + dmgRng) / 100;  // 125%
 
 		return randFunc(min, max);
 	}

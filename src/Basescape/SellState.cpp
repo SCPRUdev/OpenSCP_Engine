@@ -178,6 +178,16 @@ void SellState::delayedInit()
 
 	_cats.push_back("STR_ALL_ITEMS");
 
+	if (!_game->getMod()->getNewBaseUnlockResearch().empty())
+	{
+		bool newBasesUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getNewBaseUnlockResearch(), true);
+		if (!newBasesUnlocked)
+		{
+			_txtFunds->setVisible(false);
+			_btnOk->setVisible(false);
+		}
+	}
+
 	for (auto* soldier : *_base->getSoldiers())
 	{
 		if (_debriefingState) break;
@@ -234,6 +244,11 @@ void SellState::delayedInit()
 		{
 			qty = _debriefingState->getRecoveredItemCount(rule);
 		}
+		else if (!rule->getCanBeSoldNormally())
+		{
+			qty = 0;
+		}
+
 		else
 		{
 			qty = _base->getStorageItems()->getItem(rule);
