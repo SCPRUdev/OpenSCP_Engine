@@ -2629,7 +2629,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 			uint64_t baseSeed = baseLon * baseLat * 1e6;
 			RNG::setSeed(baseSeed);
 
-			_baseTerrain = _game->getMod()->getTerrain(_missionTexture->getRandomBaseTerrain(target), true);
+			_baseTerrain = _game->getMod()->getTerrain(_globeTexture->getRandomBaseTerrain(target), true);
 			generateBaseMap();
 		}
 		else
@@ -2673,6 +2673,28 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 			if (!execute)
 			{
 				continue;
+			}
+		}
+
+		// if this command runs conditionally based on deployed craft's groups
+		if (_craftDeployed && _craftRules)
+		{
+			if (!command->getCraftGroups().empty())
+			{
+				bool execute = false;
+				// compare the corresponding entries in the craft rules vector
+				for (int grp : command->getCraftGroups())
+				{
+					if (std::find(_craftRules->getGroups().begin(), _craftRules->getGroups().end(), grp) != _craftRules->getGroups().end())
+					{
+						execute = true;
+						break;
+					}
+				}
+				if (!execute)
+				{
+					continue;
+				}
 			}
 		}
 
