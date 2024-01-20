@@ -82,6 +82,7 @@ namespace OpenXcom
 		std::string id;
 		std::string section;
 		std::vector<std::string> _requires;
+		std::vector<std::string> disabledBy;
 		bool customPalette;
 		bool hiddenCommendation;
 
@@ -271,6 +272,7 @@ namespace OpenXcom
 		/// Loads the article from YAML.
 		void load(const YAML::Node& node, int listOrder) override;
 
+		std::string weapon;
 	};
 
 	/**
