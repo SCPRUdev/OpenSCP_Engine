@@ -2800,12 +2800,16 @@ void RuleItem::ScriptRegister(ScriptParserBase* parser)
 		rs.add<&getDamageToScript<&RuleDamageType::ToArmorPre>>("getDamageToArmorPre", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToArmor>>("getDamageToArmor", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToEnergy>>("getDamageToEnergy", "calculated damage value multiplied by the corresponding modifier");
+		rs.add<&getDamageToScript<&RuleDamageType::ToHealthPre> >("getDamageToHealthPre", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToHealth>>("getDamageToHealth", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToItem>>("getDamageToItem", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToMana>>("getDamageToMana", "calculated damage value multiplied by the corresponding modifier");
+		rs.add<&getDamageToScript<&RuleDamageType::ToMoralePre> >("getDamageToMoralePre", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToMorale>>("getDamageToMorale", "calculated damage value multiplied by the corresponding modifier");
+		rs.add<&getDamageToScript<&RuleDamageType::ToStunPre> >("getDamageToStunPre", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToStun>>("getDamageToStun", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToTile>>("getDamageToTile", "calculated damage value multiplied by the corresponding modifier");
+		rs.add<&getDamageToScript<&RuleDamageType::ToTimePre> >("getDamageToTime", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToTime>>("getDamageToTime", "calculated damage value multiplied by the corresponding modifier");
 		rs.add<&getDamageToScript<&RuleDamageType::ToWound>>("getDamageToWound", "calculated damage value multiplied by the corresponding modifier");
 

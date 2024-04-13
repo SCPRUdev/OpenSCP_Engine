@@ -32,8 +32,8 @@ RuleDamageType::RuleDamageType() :
 	IgnoreDirection(false), IgnoreSelfDestruct(false), IgnorePainImmunity(false), IgnoreNormalMoraleLose(false), IgnoreOverKill(false),
 	ArmorEffectiveness(1.0f), RadiusEffectiveness(0.0f), RadiusReduction(10.0f),
 	FireThreshold(2000), SmokeThreshold(1000),
-	ToHealth(1.0f), ToMana(0.0f), ToArmor(0.1f), ToArmorPre(0.0f), ToWound(1.0f), ToItem(0.0f), ToTile(0.5f), ToStun(0.25f), ToEnergy(0.0f), ToTime(0.0f), ToMorale(0.0f),
-	RandomHealth(false), RandomMana(false), RandomArmor(false), RandomArmorPre(false), RandomWound(true), RandomItem(false), RandomTile(false), RandomStun(true), RandomEnergy(false), RandomTime(false), RandomMorale(false),
+    ToHealthPre(0.0f), ToHealth(1.0f), ToMana(0.0f), ToArmor(0.1f), ToArmorPre(0.0f), ToWound(1.0f), ToItem(0.0f), ToTile(0.5f), ToStunPre(0.0f), ToStun(0.25f), ToEnergy(0.0f), ToTimePre(0.0f), ToTime(0.0f), ToMoralePre(0.0f), ToMorale(0.0f),
+								   RandomHealthPre(false), RandomHealth(false), RandomMana(false), RandomArmor(false), RandomArmorPre(false), RandomWound(true), RandomItem(false), RandomTile(false), RandomStunPre(false), RandomStun(true), RandomEnergy(false), RandomTimePre(false), RandomTime(false), RandomMoralePre(false),  RandomMorale(false),
 	TileDamageMethod(1)
 {
 
@@ -181,6 +181,7 @@ void RuleDamageType::load(const YAML::Node& node)
 	FireThreshold = node["FireThreshold"].as<float>(FireThreshold);
 	SmokeThreshold = node["SmokeThreshold"].as<float>(SmokeThreshold);
 
+	ToHealthPre = node["ToHealthPre"].as<float>(ToHealthPre);
 	ToHealth = node["ToHealth"].as<float>(ToHealth);
 	ToMana = node["ToMana"].as<float>(ToMana);
 	ToArmor = node["ToArmor"].as<float>(ToArmor);
@@ -188,11 +189,15 @@ void RuleDamageType::load(const YAML::Node& node)
 	ToWound = node["ToWound"].as<float>(ToWound);
 	ToItem = node["ToItem"].as<float>(ToItem);
 	ToTile = node["ToTile"].as<float>(ToTile);
+	ToStunPre = node["ToStunPre"].as<float>(ToStunPre);
 	ToStun = node["ToStun"].as<float>(ToStun);
 	ToEnergy = node["ToEnergy"].as<float>(ToEnergy);
+	ToTimePre = node["ToTimePre"].as<float>(ToTimePre);
 	ToTime = node["ToTime"].as<float>(ToTime);
+	ToMoralePre = node["ToMoralePre"].as<float>(ToMoralePre);
 	ToMorale = node["ToMorale"].as<float>(ToMorale);
 
+	RandomHealthPre = node["RandomHealthPre"].as<bool>(RandomHealthPre);
 	RandomHealth = node["RandomHealth"].as<bool>(RandomHealth);
 	RandomMana = node["RandomMana"].as<bool>(RandomMana);
 	RandomArmor = node["RandomArmor"].as<bool>(RandomArmor);
@@ -200,9 +205,12 @@ void RuleDamageType::load(const YAML::Node& node)
 	RandomWound = node["RandomWound"].as<bool>(RandomWound);
 	RandomItem = node["RandomItem"].as<bool>(RandomItem);
 	RandomTile = node["RandomTile"].as<bool>(RandomTile);
+	RandomStunPre = node["RandomStunPre"].as<bool>(RandomStunPre);
 	RandomStun = node["RandomStun"].as<bool>(RandomStun);
 	RandomEnergy = node["RandomEnergy"].as<bool>(RandomEnergy);
+	RandomTimePre = node["RandomTimePre"].as<bool>(RandomTimePre);
 	RandomTime = node["RandomTime"].as<bool>(RandomTime);
+	RandomMoralePre = node["RandomMoralePre"].as<bool>(RandomMoralePre);
 	RandomMorale = node["RandomMorale"].as<bool>(RandomMorale);
 
 	TileDamageMethod = node["TileDamageMethod"].as<int>(TileDamageMethod);
@@ -234,6 +242,15 @@ int getDamageHelper(bool random, float multipler, int damage)
 }
 
 }
+
+/**
+ * Get final damage value to armor based on damage before armor reduction.
+ */
+int RuleDamageType::getHealthPreFinalDamage(int damage) const
+{
+	return getDamageHelper(RandomHealthPre, ToHealthPre, damage);
+}
+
 
 /**
  * Get final damage value to health based on damage.
@@ -306,6 +323,15 @@ int RuleDamageType::getTileFinalDamage(int damage) const
 }
 
 /**
+ * Get final stun level change based on damage before armor reduction.
+ */
+int RuleDamageType::getStunPreFinalDamage(int damage) const
+{
+	return getDamageHelper(RandomStunPre, ToStunPre, damage);
+}
+
+
+/**
  * Get stun level change based on damage.
  */
 int RuleDamageType::getStunFinalDamage(int damage) const
@@ -330,11 +356,27 @@ int RuleDamageType::getTimeFinalDamage(int damage) const
 }
 
 /**
+ * Get time units change based on damage before armor reduction.
+ */
+int RuleDamageType::getTimePreFinalDamage(int damage) const
+{
+	return getDamageHelper(RandomTimePre, ToTimePre, damage);
+}
+
+/**
  * Get morale change based on damage.
  */
 int RuleDamageType::getMoraleFinalDamage(int damage) const
 {
 	return getDamageHelper(RandomMorale, ToMorale, damage);
+}
+
+/**
+ * Get morale change based on damage before armor reduction.
+ */
+int RuleDamageType::getMoralePreFinalDamage(int damage) const
+{
+	return getDamageHelper(RandomMoralePre, ToMoralePre, damage);
 }
 
 } //namespace OpenXcom
