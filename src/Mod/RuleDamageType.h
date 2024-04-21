@@ -95,6 +95,8 @@ struct RuleDamageType
 	float ToStunPre;
 	/// Conversion from power to stun level.
 	float ToStun;
+	/// Conversion from power to energy lose before applying armor protection.
+	float ToEnergyPre;
 	/// Conversion from power to energy lose.
 	float ToEnergy;
 	/// Conversion from power to time units lose before applying armor protection.
@@ -126,6 +128,8 @@ struct RuleDamageType
 	bool RandomStunPre;
 	/// Damage type use random conversion stun level.
 	bool RandomStun;
+	/// Damage type use random conversion energy pre lose.
+	bool RandomEnergyPre;
 	/// Damage type use random conversion energy lose.
 	bool RandomEnergy;
 	/// Damage type use random conversion time pre units lose.
@@ -181,6 +185,8 @@ struct RuleDamageType
 	int getStunPreFinalDamage(int damage) const;
 	/// Get stun level change based on damage.
 	int getStunFinalDamage(int damage) const;
+	/// Get energy change based on damage before armor reduction.
+	int getEnergyPreFinalDamage(int damage) const;
 	/// Get energy change based on damage.
 	int getEnergyFinalDamage(int damage) const;
 	/// Get time pre units change based on damage before armor reduction.

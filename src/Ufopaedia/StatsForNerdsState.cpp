@@ -2022,6 +2022,9 @@ void StatsForNerdsState::initItemList()
 		addFloatAsPercentage(ss, rule->ToTime, "ToTime", ruleByResistType->ToTime);
 		addBoolean(ss, rule->RandomTime, "RandomTime", ruleByResistType->RandomTime);
 
+		addFloatAsPercentage(ss, rule->ToEnergyPre, "ToEnergyPre", ruleByResistType->ToEnergyPre);
+		addBoolean(ss, rule->RandomEnergyPre, "RandomEnergyPre", ruleByResistType->RandomEnergyPre);
+
 		addFloatAsPercentage(ss, rule->ToEnergy, "ToEnergy", ruleByResistType->ToEnergy);
 		addBoolean(ss, rule->RandomEnergy, "RandomEnergy", ruleByResistType->RandomEnergy);
 
