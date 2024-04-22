@@ -167,7 +167,7 @@ RuleItem::RuleItem(const std::string &type, int listOrder) :
 	_woundRecovery(0), _healthRecovery(0), _stunRecovery(0), _energyRecovery(0), _manaRecovery(0), _moraleRecovery(0), _painKillerRecovery(1.0f),
 	_recoveryPoints(0), _armor(20), _turretType(-1),
 	_aiUseDelay(-1), _aiMeleeHitCount(25),
-	_recover(true), _recoverCorpse(true), _ignoreInBaseDefense(false), _ignoreInCraftEquip(true), _liveAlien(false), _canBeSoldNormally(true),
+															 _recover(true), _recoverCorpse(true), _ignoreInBaseDefense(false), _ignoreInCraftEquip(true), _liveAlien(false), _canBeSoldNormally(true), _canBeTransferredNormally(true),
 	_liveAlienPrisonType(0), _attraction(0), _flatUse(0, 1), _flatThrow(0, 1), _flatPrime(0, 1), _flatUnprime(0, 1), _arcingShot(false),
 	_experienceTrainingMode(ETM_DEFAULT), _manaExperience(0), _listOrder(listOrder),
 	_maxRange(200), _minRange(0), _dropoff(2), _bulletSpeed(0), _explosionSpeed(0), _shotgunPellets(0), _shotgunBehaviorType(0), _shotgunSpread(100), _shotgunChoke(100),
@@ -607,6 +607,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, const ModScript& parsers)
 	_liveAlien = node["liveAlien"].as<bool>(_liveAlien);
 	_liveAlienPrisonType = node["prisonType"].as<int>(_liveAlienPrisonType);
 	_canBeSoldNormally = node["canBeSoldNormally"].as<bool>(_canBeSoldNormally);
+	_canBeTransferredNormally = node["canBeTransferredNormally"].as<bool>(_canBeTransferredNormally);
 	_attraction = node["attraction"].as<int>(_attraction);
 	_arcingShot = node["arcingShot"].as<bool>(_arcingShot);
 	_experienceTrainingMode = (ExperienceTrainingMode)node["experienceTrainingMode"].as<int>(_experienceTrainingMode);
@@ -2090,6 +2091,14 @@ bool RuleItem::getCanBeSoldNormally() const
 	return _canBeSoldNormally;
 }
 
+/**
+ * Returns if this if this item can be transferred via transfer menu.
+ * @return True if this item can be transferred via transfer menu.
+ */
+bool RuleItem::getCanBeTransferredNormally() const
+{
+	return _canBeTransferredNormally;
+}
 
 
 /**
