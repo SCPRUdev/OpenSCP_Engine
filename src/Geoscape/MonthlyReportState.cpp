@@ -109,6 +109,22 @@ MonthlyReportState::MonthlyReportState(Globe *globe) : _gameOver(0), _ratingTota
 	_txtFailure->setText(tr("STR_YOU_HAVE_FAILED"));
 	_txtFailure->setVisible(false);
 
+ 	if (!_game->getMod()->getNewBaseUnlockResearch().empty())
+	  {
+		  bool newBasesUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getNewBaseUnlockResearch(), true);
+		  if (!newBasesUnlocked)
+		  {
+			  _txtRating->setVisible(false);
+			  _txtIncome->setVisible(false);
+			  _txtMaintenance->setVisible(false);
+			  _txtBalance->setVisible(false);
+			  _txtBonus->setVisible(false);
+			  _txtDesc->setVisible(false);
+		  }
+	  }
+
+
+
 	calculateChanges();
 
 	int month = _game->getSavedGame()->getTime()->getMonth() - 1, year = _game->getSavedGame()->getTime()->getYear();
