@@ -32,8 +32,8 @@ RuleDamageType::RuleDamageType() :
 	IgnoreDirection(false), IgnoreSelfDestruct(false), IgnorePainImmunity(false), IgnoreNormalMoraleLose(false), IgnoreOverKill(false),
 	ArmorEffectiveness(1.0f), RadiusEffectiveness(0.0f), RadiusReduction(10.0f),
 	FireThreshold(2000), SmokeThreshold(1000),
-    ToHealthPre(0.0f), ToHealth(1.0f), ToMana(0.0f), ToArmor(0.1f), ToArmorPre(0.0f), ToWound(1.0f), ToItem(0.0f), ToTile(0.5f), ToStunPre(0.0f), ToStun(0.25f), ToEnergyPre(0.0f), ToEnergy(0.0f), ToTimePre(0.0f), ToTime(0.0f), ToMoralePre(0.0f), ToMorale(0.0f),
-    RandomHealthPre(false), RandomHealth(false), RandomMana(false), RandomArmor(false), RandomArmorPre(false), RandomWound(true), RandomItem(false), RandomTile(false), RandomStunPre(false), RandomStun(true), RandomEnergyPre(false), RandomEnergy(false), RandomTimePre(false), RandomTime(false), RandomMoralePre(false),  RandomMorale(false),
+  ToHealthPre(0.0f), ToHealth(1.0f), ToMana(0.0f), ToArmor(0.1f), ToArmorPre(0.0f), ToWound(1.0f), ToItem(0.0f), ToTile(0.5f), ToStunPre(0.0f), ToStun(0.25f), ToEnergyPre(0.0f), ToEnergy(0.0f), ToTimePre(0.0f), ToTime(0.0f), ToMoralePre(0.0f), ToMorale(0.0f),
+  RandomHealthPre(false), RandomHealth(false), RandomMana(false), RandomArmor(false), RandomArmorPre(false), RandomWound(true), RandomItem(false), RandomTile(false), RandomStunPre(false), RandomStun(true), RandomEnergyPre(false), RandomEnergy(false), RandomTimePre(false), RandomTime(false), RandomMoralePre(false),  RandomMorale(false),
 	TileDamageMethod(1)
 {
 

@@ -529,6 +529,10 @@ void TransferItemsState::completeTransfer()
 					if (soldier == transferRow.rule)
 					{
 						soldier->setPsiTraining(false);
+						if (soldier->isInTraining())
+						{
+							soldier->setReturnToTrainingWhenHealed(true);
+						}
 						soldier->setTraining(false);
 						t = new Transfer(time);
 						t->setSoldier(soldier);
@@ -547,6 +551,10 @@ void TransferItemsState::completeTransfer()
 					if (soldier->getCraft() == craft)
 					{
 						soldier->setPsiTraining(false);
+						if (soldier->isInTraining())
+						{
+							soldier->setReturnToTrainingWhenHealed(true);
+						}
 						soldier->setTraining(false);
 						if (craft->getStatus() == "STR_OUT")
 						{
