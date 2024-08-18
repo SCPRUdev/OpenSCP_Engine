@@ -155,6 +155,7 @@ private:
 	bool _togglePersonalLight, _toggleNightVision;
 	int _toggleBrightness;
 	int _monthsPassed;
+	int _daysPassed;
 	std::string _graphRegionToggles;
 	std::string _graphCountryToggles;
 	std::string _graphFinanceToggles;
@@ -201,6 +202,8 @@ public:
 	int getDifficultyCoefficient() const;
 	/// Gets the sell price coefficient.
 	int getSellPriceCoefficient() const;
+	/// Gets the buy price coefficient.
+	int getBuyPriceCoefficient() const;
 	/// Gets the game ending.
 	GameEnding getEnding() const;
 	/// Sets the game ending.
@@ -409,6 +412,9 @@ public:
 	int selectSoldierNationalityByLocation(const Mod* mod, const RuleSoldier* rule, const Target* target) const;
 	/// Return the month counter.
 	int getMonthsPassed() const;
+	/// Return the day counter.
+	int getDaysPassed() const { return _daysPassed; }
+	void increaseDaysPassed() { _daysPassed++; }
 	/// Return the GraphRegionToggles.
 	const std::string &getGraphRegionToggles() const;
 	/// Return the GraphCountryToggles.

@@ -110,7 +110,7 @@ SavedGame::SavedGame() :
 	_difficulty(DIFF_BEGINNER), _end(END_NONE), _ironman(false), _globeLon(0.0), _globeLat(0.0), _globeZoom(0),
 	_battleGame(0), _previewBase(nullptr), _debug(false), _warned(false),
 	_togglePersonalLight(true), _toggleNightVision(false), _toggleBrightness(0),
-	_monthsPassed(-1), _selectedBase(0), _autosales(), _disableSoldierEquipment(false), _alienContainmentChecked(false)
+	_monthsPassed(-1), _daysPassed(0), _selectedBase(0), _autosales(), _disableSoldierEquipment(false), _alienContainmentChecked(false)
 {
 	_time = new GameTime(6, 1, 1, 1999, 12, 0, 0);
 	_alienStrategy = new AlienStrategy();
@@ -309,6 +309,16 @@ SaveInfo SavedGame::getSaveInfo(const std::string &file, Language *lang)
 		save.displayName = lang->getString("STR_AUTO_SAVE_GEOSCAPE_SLOT");
 		save.reserved = true;
 	}
+	else if (save.fileName.find(AUTOSAVE_GEOSCAPE) != std::string::npos)
+	{
+		GameTime time = GameTime(6, 1, 1, 1999, 12, 0, 0);
+		if (doc["time"])
+		{
+			time.load(doc["time"]);
+		}
+		save.displayName = lang->getString("STR_AUTO_SAVE_GEOSCAPE_SLOT_WITH_NUMBER").arg(time.getDayString(lang));
+		save.reserved = true;
+	}
 	else if (save.fileName == AUTOSAVE_BATTLESCAPE)
 	{
 		save.displayName = lang->getString("STR_AUTO_SAVE_BATTLESCAPE_SLOT");
@@ -397,6 +407,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
 	if (doc["rng"] && (_ironman || !Options::newSeedOnLoad))
 		RNG::setSeed(doc["rng"].as<uint64_t>());
 	_monthsPassed = doc["monthsPassed"].as<int>(_monthsPassed);
+	_daysPassed = doc["daysPassed"].as<int>(_daysPassed);
 	_graphRegionToggles = doc["graphRegionToggles"].as<std::string>(_graphRegionToggles);
 	_graphCountryToggles = doc["graphCountryToggles"].as<std::string>(_graphCountryToggles);
 	_graphFinanceToggles = doc["graphFinanceToggles"].as<std::string>(_graphFinanceToggles);
@@ -673,33 +684,13 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
 		{
 			for (YAML::const_iterator i = layout.begin(); i != layout.end(); ++i)
 			{
-				EquipmentLayoutItem *layoutItem = new EquipmentLayoutItem(*i);
-
-				// check if everything still exists (in case of mod upgrades)
-				bool error = false;
-				if (!mod->getInventory(layoutItem->getSlot()))
-					error = true;
-				if (!mod->getItem(layoutItem->getItemType()))
-					error = true;
-				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+				try
 				{
-					if (layoutItem->getAmmoItemForSlot(slot) == "NONE" || mod->getItem(layoutItem->getAmmoItemForSlot(slot)))
-					{
-						// ok
-					}
-					else
-					{
-						error = true;
-						break;
-					}
+					_globalEquipmentLayout[j].push_back(new EquipmentLayoutItem(*i, mod));
 				}
-				if (!error)
+				catch (Exception& ex)
 				{
-					_globalEquipmentLayout[j].push_back(layoutItem);
-				}
-				else
-				{
-					delete layoutItem;
+					Log(LOG_ERROR) << "Error loading Layout: " << ex.what();
 				}
 			}
 		}
@@ -726,7 +717,7 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
 		std::string key = oss.str();
 		if (const YAML::Node &loadout = doc[key])
 		{
-			_globalCraftLoadout[j]->load(loadout);
+			_globalCraftLoadout[j]->load(loadout, mod);
 		}
 		std::ostringstream oss2;
 		oss2 << "globalCraftLoadoutName" << j;
@@ -806,6 +797,7 @@ void SavedGame::save(const std::string &filename, Mod *mod) const
 	node["difficulty"] = (int)_difficulty;
 	node["end"] = (int)_end;
 	node["monthsPassed"] = _monthsPassed;
+	node["daysPassed"] = _daysPassed;
 	node["graphRegionToggles"] = _graphRegionToggles;
 	node["graphCountryToggles"] = _graphCountryToggles;
 	node["graphFinanceToggles"] = _graphFinanceToggles;
@@ -1029,6 +1021,16 @@ int SavedGame::getDifficultyCoefficient() const
 int SavedGame::getSellPriceCoefficient() const
 {
 	return Mod::SELL_PRICE_COEFFICIENT[std::min((int)_difficulty, 4)];
+}
+
+/**
+ * Returns the game's buy price coefficient based
+ * on the current difficulty level.
+ * @return Buy price coefficient.
+ */
+int SavedGame::getBuyPriceCoefficient() const
+{
+	return Mod::BUY_PRICE_COEFFICIENT[std::min((int)_difficulty, 4)];
 }
 
 /**
@@ -1523,15 +1525,15 @@ const RuleResearch* SavedGame::selectGetOneFree(const RuleResearch* research)
 		{
 			if (isResearched(pair.first, false))
 			{
-				for (auto* research : pair.second)
+				for (auto* res : pair.second)
 				{
-					if (isResearchRuleStatusDisabled(research->getName()))
+					if (isResearchRuleStatusDisabled(res->getName()))
 					{
 						continue; // skip disabled topics
 					}
-					if (!isResearched(research, false))
+					if (!isResearched(res, false))
 					{
-						possibilities.push_back(research);
+						possibilities.push_back(res);
 					}
 				}
 			}
@@ -1940,9 +1942,15 @@ void SavedGame::getDependableManufacture (std::vector<RuleManufacture *> & depen
  */
 void SavedGame::getAvailableTransformations (std::vector<RuleSoldierTransformation *> & transformations, const Mod * mod, Base * base) const
 {
+	auto& list = mod->getSoldierTransformationList();
+	if (list.empty())
+	{
+		return;
+	}
+
 	RuleBaseFacilityFunctions baseFunc = base->getProvidedBaseFunc({});
 
-	for (const auto& transformType : mod->getSoldierTransformationList())
+	for (const auto& transformType : list)
 	{
 		RuleSoldierTransformation *m = mod->getSoldierTransformation(transformType);
 		if (!isResearched(m->getRequiredResearch()))
@@ -3351,7 +3359,7 @@ void SavedGame::handlePrimaryResearchSideEffects(const std::vector<const RuleRes
 		if (spawnedItem)
 		{
 			Transfer* t = new Transfer(1);
-			t->setItems(myResearchRule->getSpawnedItem(), std::max(1, myResearchRule->getSpawnedItemCount()));
+			t->setItems(spawnedItem, std::max(1, myResearchRule->getSpawnedItemCount()));
 			base->getTransfers()->push_back(t);
 		}
 		for (const auto& spawnedItemName2 : myResearchRule->getSpawnedItemList())
@@ -3360,7 +3368,7 @@ void SavedGame::handlePrimaryResearchSideEffects(const std::vector<const RuleRes
 			if (spawnedItem2)
 			{
 				Transfer* t = new Transfer(1);
-				t->setItems(spawnedItemName2);
+				t->setItems(spawnedItem2);
 				base->getTransfers()->push_back(t);
 			}
 		}
@@ -3427,6 +3435,30 @@ void randomRangeScript(RNG::RandomState* rs, int& val, int min, int max)
 	if (rs && max >= min)
 	{
 		val = rs->generate(min, max);
+	}
+	else
+	{
+		val = 0;
+	}
+}
+
+void randomRangeSymmetricScript(RNG::RandomState* rs, int& val, int max)
+{
+	if (rs && max >= 0)
+	{
+		val = rs->generate(-max, max);
+	}
+	else
+	{
+		val = 0;
+	}
+}
+
+void difficultyLevelScript(const SavedGame* sg, int& val)
+{
+	if (sg)
+	{
+		val = sg->getDifficulty();
 	}
 	else
 	{
@@ -3571,6 +3603,7 @@ void SavedGame::ScriptRegister(ScriptParserBase* parser)
 
 		rs.add<&randomChanceScript>("randomChance", "Change value from range 0-100 to 0-1 based on probability");
 		rs.add<&randomRangeScript>("randomRange", "Return random value from defined range");
+		rs.add<&randomRangeSymmetricScript>("randomRangeSymmetric", "Return random value from negative to positive of given max value");
 
 		rs.addDebugDisplay<&debugDisplayScript>();
 	}
@@ -3596,6 +3629,8 @@ void SavedGame::ScriptRegister(ScriptParserBase* parser)
 
 	sgg.add<&getTimeScript>("getTime", "Get global time that is Greenwich Mean Time");
 	sgg.add<&getRandomScript>("getRandomState");
+
+	sgg.add<&difficultyLevelScript>("difficultyLevel", "Get difficulty level");
 
 	sgg.add<&isResearchedScript>("isResearched");
 

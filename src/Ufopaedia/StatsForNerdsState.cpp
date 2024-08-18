@@ -1837,6 +1837,7 @@ void StatsForNerdsState::initItemList()
 	addBoolean(ss, itemRule->isManaRequired(), "manaRequired");
 	int targetMatrixDefault = itemBattleType == BT_PSIAMP ? 6 : 7;
 	addItemTargets(ss, itemRule, "targetMatrix", targetMatrixDefault);
+	addBoolean(ss, itemRule->convertToCivilian(), "convertToCivilian");
 	addBoolean(ss, itemRule->isLOSRequired(), "LOSRequired");
 
 	if (itemBattleType == BT_FIREARM
@@ -2158,7 +2159,20 @@ void StatsForNerdsState::initItemList()
 	addVectorOfRulesId(ss, itemRule->getSupportedInventorySections(), "supportedInventorySections");
 
 	addDouble(ss, itemRule->getSize(), "size");
-	addInteger(ss, itemRule->getBuyCost(), "costBuy", 0, true);
+	if (_game->getSavedGame()->getBuyPriceCoefficient() == 100)
+	{
+		addInteger(ss, itemRule->getBuyCost(), "costBuy", 0, true);
+	}
+	else
+	{
+		addHeading("_calculatedValues", "STR_FOR_DIFFICULTY", true);
+		{
+			int adjustedCost = itemRule->getBuyCost() * _game->getSavedGame()->getBuyPriceCoefficient() / 100;
+			addInteger(ss, adjustedCost, "costBuy", 0, true);
+
+			endHeading();
+		}
+	}
 	addInteger(ss, itemRule->getMonthlyBuyLimit(), "monthlyBuyLimit");
 	addInteger(ss, itemRule->getTransferTime(), "transferTime", 24);
 	addInteger(ss, itemRule->getMonthlySalary(), "monthlySalary", 0, true);
@@ -2221,6 +2235,8 @@ void StatsForNerdsState::initItemList()
 		addInteger(ss, itemRule->getRecoveryPoints(), "recoveryPoints");
 		addBoolean(ss, itemRule->isAlien(), "liveAlien");
 		addInteger(ss, itemRule->getPrisonType(), "prisonType");
+		addSingleString(ss, itemRule->getSellActionMessage(), "sellActionMessage");
+		addInteger(ss, itemRule->getVehicleFixedAmmoSlot(), "vehicleFixedAmmoSlot");
 
 		addSection("{Explosives}", "", _white);
 		addInteger(ss, itemRule->getPowerForAnimation(), "powerForAnimation");
@@ -2923,6 +2939,9 @@ void StatsForNerdsState::initSoldierBonusList()
 	addInteger(ss, bonusRule->getUnderArmor(), "underArmor");
 
 	addInteger(ss, bonusRule->getVisibilityAtDark(), "visibilityAtDark");
+	addInteger(ss, bonusRule->getVisibilityAtDay(), "visibilityAtDay");
+	addInteger(ss, bonusRule->getPsiVision(), "getPsiVision");
+	addInteger(ss, bonusRule->getHeatVision(), "getHeatVision");
 
 	addHeading("recovery");
 	{
@@ -3109,6 +3128,8 @@ void StatsForNerdsState::initFacilityList()
 	addIntegerPercent(ss, facilityRule->getRadarChance(), "radarChance");
 	addInteger(ss, facilityRule->getDefenseValue(), "defense");
 	addIntegerPercent(ss, facilityRule->getHitRatio(), "hitRatio");
+	addInteger(ss, facilityRule->getAmmoMax(), "ammoMax", 0);
+	addInteger(ss, facilityRule->getRearmRate(), "rearmRate", 1);
 	addInteger(ss, facilityRule->getAmmoNeeded(), "ammoNeeded", 1);
 	addRule(ss, facilityRule->getAmmoItem(), "ammoItem");
 
@@ -3217,6 +3238,9 @@ void StatsForNerdsState::initCraftList()
 	addInteger(ss, craftRule->getPilots(), "pilots");
 	addInteger(ss, craftRule->getMaxVehiclesAndLargeSoldiers(), "vehicles");
 	addInteger(ss, craftRule->getMaxVehiclesAndLargeSoldiersLimit(), "maxHWPUnitsLimit", craftRule->getMaxVehiclesAndLargeSoldiers());
+
+	addBoolean(ss, craftRule->isOnlyOneSoldierGroupAllowed(), "onlyOneSoldierGroupAllowed");
+	addVectorOfIntegers(ss, craftRule->getAllowedSoldierGroups(), "allowedSoldierGroups");
 
 	addInteger(ss, craftRule->getMaxSmallSoldiers(), "maxSmallSoldiers", -1);
 	addInteger(ss, craftRule->getMaxLargeSoldiers(), "maxLargeSoldiers", -1);
@@ -3337,7 +3361,7 @@ void StatsForNerdsState::initCraftList()
 	}
 	addInteger(ss, craftRule->getShieldRechargeAtBase(), "shieldRechargedAtBase", 1000);
 
-	addSingleString(ss, craftRule->getRefuelItem(), "refuelItem");
+	addRule(ss, craftRule->getRefuelItem(), "refuelItem");
 	addInteger(ss, craftRule->getRefuelRate(), "refuelRate", 1);
 	addInteger(ss, craftRule->getRepairRate(), "repairRate", 1);
 
@@ -3377,6 +3401,7 @@ void StatsForNerdsState::initCraftList()
 		addInteger(ss, craftRule->getListOrder(), "listOrder");
 
 		addSection("{Geoscape}", "", _white);
+		addSingleString(ss, craftRule->getDefaultDisplayAltitude(), "defaultAltitude", "STR_VERY_LOW");
 		addInteger(ss, craftRule->getSprite(0), "sprite (Minimized)", -1);
 		addSpriteResourcePath(ss, mod, "INTICON.PCK", craftRule->getSprite(0));
 		addInteger(ss, craftRule->getSprite(0) + 11, "_sprite (Dogfight)", 10);
@@ -3398,6 +3423,7 @@ void StatsForNerdsState::initCraftList()
 		addBoolean(ss, craftRule->getBattlescapeTerrainData() != 0, "battlescapeTerrainData", false); // just say if there is any or not
 		addBoolean(ss, craftRule->isMapVisible(), "mapVisible", true);
 		addVectorOfIntegers(ss, craftRule->getCraftInventoryTile(), "craftInventoryTile");
+		addVectorOfIntegers(ss, craftRule->getGroups(), "groups");
 		addBoolean(ss, craftRule->useAllStartTiles(), "useAllStartTiles");
 		addSingleString(ss, craftRule->getCustomPreviewTypeRaw(), "customPreview");
 		if (craftRule->getDeployment().empty())
@@ -3634,6 +3660,7 @@ void StatsForNerdsState::initUfoList()
 
 		addSection("{Exotic}", "", _white);
 		addInteger(ss, ufoRule->getSoftlockThreshold(), "softlockThreshold", 100);
+		addSingleString(ss, ufoRule->getHitImage(), "hitImage");
 		addInteger(ss, ufoRule->getMissilePower(), "missilePower");
 		addBoolean(ss, ufoRule->isUnmanned(), "unmanned");
 		addInteger(ss, ufoRule->getSplashdownSurvivalChance(), "splashdownSurvivalChance", 100);
@@ -3661,6 +3688,11 @@ void StatsForNerdsState::initUfoList()
 		addInteger(ss, ufoRule->getHuntAlertSound(), "huntAlertSound", -1);
 		tmpSoundVector.clear();
 		tmpSoundVector.push_back(ufoRule->getHuntAlertSound());
+		addSoundVectorResourcePaths(ss, mod, "GEO.CAT", tmpSoundVector);
+
+		addInteger(ss, ufoRule->getHitSound(), "hitSound", -1);
+		tmpSoundVector.clear();
+		tmpSoundVector.push_back(ufoRule->getHitSound());
 		addSoundVectorResourcePaths(ss, mod, "GEO.CAT", tmpSoundVector);
 
 		addSection("{Script tags}", "", _white, true);

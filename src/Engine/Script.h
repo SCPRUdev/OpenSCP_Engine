@@ -94,7 +94,7 @@ using ScriptNull = std::nullptr_t;
 /**
  * Script numeric type, alias to int.
  */
-using ScriptInt = int;
+using ScriptInt = Sint32;
 
 /**
  * Script const text, always zero terminated.
@@ -527,8 +527,9 @@ struct TypeInfoImpl
 
 	enum
 	{
-		metaDestSize = std::is_pod<t3>::value ? sizeof(t3) : 0,
-		metaDestAlign = std::is_pod<t3>::value ? alignof(t3) : 0
+		metaIsSimple = std::is_trivially_copyable_v<t3> && std::is_nothrow_default_constructible_v<t3> && std::is_trivially_destructible_v<t3>,
+		metaDestSize = metaIsSimple ? sizeof(t3) : 0,
+		metaDestAlign = metaIsSimple ? alignof(t3) : 0
 	};
 
 	/// meta data of destination type (without pointer), invalid if type is not POD
@@ -1093,7 +1094,7 @@ struct ScriptTypeData
  */
 struct ScriptValueData
 {
-	ScriptRawMemory<sizeof(void*)> data;
+	ScriptRawMemory<2*sizeof(void*)> data;
 	ArgEnum type = ArgInvalid;
 	Uint8 size = 0;
 
@@ -1207,6 +1208,7 @@ class ScriptParserBase
 	ScriptRef _regOutName[ScriptMaxOut];
 	std::string _name;
 	std::string _defaultScript;
+	std::string _description;
 	std::vector<std::vector<char>> _strings;
 	std::vector<ScriptTypeData> _typeList;
 	std::vector<ScriptProcData> _procList;
@@ -1279,6 +1281,8 @@ protected:
 	bool haveTypeBase(ArgEnum type);
 	/// Set default script for type.
 	void setDefault(const std::string& s) { _defaultScript = s; }
+	/// Set description for script.
+	void setDescription(const std::string& s) { _description = s; }
 	/// Set mode where return does not accept any value.
 	void setEmptyReturn() { _emptyReturn = true; }
 
@@ -1675,7 +1679,9 @@ protected:
 		static_assert(std::is_base_of<ScriptGlobal, ThisType>::value, "Type must be derived");
 		addTagValueTypeBase(name, &loadHelper<ThisType, LoadValue>, &saveHelper<ThisType, SaveValue>);
 	}
+
 private:
+	std::string _currFile;
 	std::vector<std::vector<char>> _strings;
 	std::vector<std::vector<ScriptContainerBase>> _events;
 	std::map<std::string, ScriptParserBase*> _parserNames;
@@ -1758,10 +1764,15 @@ public:
 		}
 	}
 
+	/// Get current file that is loaded.
+	const std::string& getCurrentFile() const { return _currFile; }
+
 	/// Initialize shared globals like types.
 	virtual void initParserGlobals(ScriptParserBase* parser) { }
 	/// Prepare for loading data.
 	virtual void beginLoad();
+	/// Prepare for loading file.
+	virtual void fileLoad(const std::string& path);
 	/// Finishing loading data.
 	virtual void endLoad();
 

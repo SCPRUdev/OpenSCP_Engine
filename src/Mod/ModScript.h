@@ -52,6 +52,7 @@ class MapScript;
 class RuleVideo;
 
 class Mod;
+class Position;
 class Tile;
 class BattleUnit;
 class BattleUnitVisibility;
@@ -184,6 +185,21 @@ class ModScript
 		SelectItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 	};
 
+
+	struct VaporParticleBaseParser : ScriptParser<ScriptOutputArgs<int&, Position&, Position&, Position&, int&, int&, int&, int>, const BattleItem*, const BattleItem*, int, int, int, Position, Position, Position, RNG::RandomState*>
+	{
+		VaporParticleBaseParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
+	};
+	struct VaporParticleAmmoParser : VaporParticleBaseParser
+	{
+		VaporParticleAmmoParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
+	};
+	struct VaporParticleWeaponParser : VaporParticleBaseParser
+	{
+		VaporParticleWeaponParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
+	};
+
+
 	struct TryPsiAttackItemParser : ScriptParserEvents<ScriptOutputArgs<int&>, const BattleItem*, const BattleUnit*, const BattleUnit*, const RuleSkill*, int, int, int, RNG::RandomState*, int, int, const SavedBattleGame*>
 	{
 		TryPsiAttackItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
@@ -192,6 +208,15 @@ class ModScript
 	struct TryMeleeAttackItemParser : ScriptParserEvents<ScriptOutputArgs<int&>, const BattleItem*, const BattleUnit*, const BattleUnit*, const RuleSkill*, int, int, int, RNG::RandomState*, int, int, const SavedBattleGame*>
 	{
 		TryMeleeAttackItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
+	};
+
+	struct SellCostItemParser : ScriptParserEvents<Output, const RuleItem*, const SavedGame*, int>
+	{
+		SellCostItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
+	};
+	struct BuyCostItemParser : ScriptParserEvents<Output, const RuleItem*, const SavedGame*, int>
+	{
+		BuyCostItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod);
 	};
 
 	struct StatsForNerdsItemParser : ScriptParserEvents<ScriptOutputArgs<>, const RuleItem*, StatsForNerdsState*, const SavedGame*>
@@ -330,6 +355,8 @@ public:
 
 	using RecolorItemSprite = MACRO_NAMED_SCRIPT("recolorItemSprite", RecolorItemParser);
 	using SelectItemSprite = MACRO_NAMED_SCRIPT("selectItemSprite", SelectItemParser);
+	using VaporParticleAmmo = MACRO_NAMED_SCRIPT("vaporParticleAmmo", VaporParticleAmmoParser);
+	using VaporParticleWeapon = MACRO_NAMED_SCRIPT("vaporParticleWeapon", VaporParticleWeaponParser);
 
 	using ReactionWeaponAction = MACRO_NAMED_SCRIPT("reactionWeaponAction", ReactionUnitParser);
 
@@ -341,6 +368,9 @@ public:
 
 	using CreateItem = MACRO_NAMED_SCRIPT("createItem", CreateItemParser);
 	using NewTurnItem = MACRO_NAMED_SCRIPT("newTurnItem", NewTurnItemParser);
+
+	using SellCostItem = MACRO_NAMED_SCRIPT("sellCostItem", SellCostItemParser);
+	using BuyCostItem = MACRO_NAMED_SCRIPT("buyCostItem", BuyCostItemParser);
 
 	using StatsForNerdsItem = MACRO_NAMED_SCRIPT("statsForNerdsItem", StatsForNerdsItemParser);
 
@@ -438,6 +468,8 @@ public:
 	using BattleItemScripts = ScriptGroup<Mod,
 		RecolorItemSprite,
 		SelectItemSprite,
+		VaporParticleAmmo,
+		VaporParticleWeapon,
 
 		ReactionWeaponAction,
 
@@ -449,6 +481,9 @@ public:
 
 		CreateItem,
 		NewTurnItem,
+
+		SellCostItem,
+		BuyCostItem,
 
 		StatsForNerdsItem
 	>;

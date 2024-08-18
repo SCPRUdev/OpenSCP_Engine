@@ -74,6 +74,15 @@ namespace Options
 
 	/// Creates the options info.
 	void create();
+	void createOptionsOXC();
+	void createAdvancedOptionsOXC();
+	void createControlsOXC();
+	void createOptionsOXCE();
+	void createAdvancedOptionsOXCE();
+	void createControlsOXCE();
+	void createOptionsOTHER();
+	void createAdvancedOptionsOTHER();
+	void createControlsOTHER();
 	/// Restores default options.
 	void resetDefault(bool includeMods);
 	/// Initializes the options settings.
@@ -120,6 +129,8 @@ namespace Options
 	std::vector<const ModInfo*> getActiveMods();
 	/// If we should skip the main menu and just load the last save
 	bool getLoadLastSave();
+	/// If we should skip the main menu and just load the specified save
+	const std::string& getLoadThisSave();
 	/// And do it only at startup
 	void expendLoadLastSave();
 }

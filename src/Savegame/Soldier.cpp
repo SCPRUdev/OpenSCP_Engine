@@ -214,14 +214,13 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 	{
 		for (YAML::const_iterator i = layout.begin(); i != layout.end(); ++i)
 		{
-			EquipmentLayoutItem *layoutItem = new EquipmentLayoutItem(*i);
-			if (mod->getInventory(layoutItem->getSlot()))
+			try
 			{
-				_equipmentLayout.push_back(layoutItem);
+				_equipmentLayout.push_back(new EquipmentLayoutItem(*i, mod));
 			}
-			else
+			catch (Exception& ex)
 			{
-				delete layoutItem;
+				Log(LOG_ERROR) << "Error loading Layout: " << ex.what();
 			}
 		}
 	}
@@ -229,14 +228,13 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 	{
 		for (YAML::const_iterator i = layout.begin(); i != layout.end(); ++i)
 		{
-			EquipmentLayoutItem *layoutItem = new EquipmentLayoutItem(*i);
-			if (mod->getInventory(layoutItem->getSlot()))
+			try
 			{
-				_personalEquipmentLayout.push_back(layoutItem);
+				_personalEquipmentLayout.push_back(new EquipmentLayoutItem(*i, mod));
 			}
-			else
+			catch (Exception& ex)
 			{
-				delete layoutItem;
+				Log(LOG_ERROR) << "Error loading Layout: " << ex.what();
 			}
 		}
 	}
@@ -258,6 +256,34 @@ void Soldier::load(const YAML::Node& node, const Mod *mod, SavedGame *save, cons
 	_corpseRecovered = node["corpseRecovered"].as<bool>(_corpseRecovered);
 	_previousTransformations = node["previousTransformations"].as<std::map<std::string, int > >(_previousTransformations);
 	_transformationBonuses = node["transformationBonuses"].as<std::map<std::string, int > >(_transformationBonuses);
+
+	if (const YAML::Node& spawnInfo = node["randomTransformationBonuses"])
+	{
+		WeightedOptions randomTransformationBonuses;
+		randomTransformationBonuses.load(spawnInfo);
+		int transformationBonusesCount = node["transformationBonusesCount"].as<int>(1); // if not provided, default is 1
+		while (transformationBonusesCount > 0 && !randomTransformationBonuses.empty())
+		{
+			transformationBonusesCount--;
+			std::string chosen = randomTransformationBonuses.choose();
+			randomTransformationBonuses.set(chosen, 0);
+
+			// Award a soldier bonus, if defined
+			if (!Mod::isEmptyRuleName(chosen))
+			{
+				auto it2 = _transformationBonuses.find(chosen);
+				if (it2 != _transformationBonuses.end())
+				{
+					it2->second += 1;
+				}
+				else
+				{
+					_transformationBonuses[chosen] = 1;
+				}
+			}
+		}
+	}
+
 	_scriptValues.load(node, shared);
 }
 
@@ -495,7 +521,7 @@ void Soldier::autoMoveEquipment(Craft* craft, Base* base, int toBase)
 		// ignore fixed weapons...
 		if (!invItem->isFixed())
 		{
-			const std::string& invItemMain = invItem->getItemType();
+			const auto* invItemMain = invItem->getItemType();
 			if (toBase > 0)
 			{
 				if (onTheCraft->getItem(invItemMain) > 0)
@@ -518,8 +544,8 @@ void Soldier::autoMoveEquipment(Craft* craft, Base* base, int toBase)
 		// ...but not their ammo
 		for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 		{
-			const std::string& invItemAmmo = invItem->getAmmoItemForSlot(slot);
-			if (invItemAmmo != "NONE")
+			const auto* invItemAmmo = invItem->getAmmoItemForSlot(slot);
+			if (invItemAmmo != nullptr)
 			{
 				if (toBase > 0)
 				{
@@ -1708,6 +1734,23 @@ bool Soldier::isEligibleForTransformation(const RuleSoldierTransformation *trans
 		(currentStats.psiSkill < minStats.psiSkill && minStats.psiSkill != 0)) // The != 0 is required for the "psi training at any time" option, as it sets skill to negative in training
 		return false;
 
+	// Does this soldier meet the maximum stat requirements for the project?
+	currentStats = transformationRule->getIncludeBonusesForMaxStats() ? _tmpStatsWithSoldierBonuses : _currentStats;
+	UnitStats maxStats = transformationRule->getRequiredMaxStats();
+	if (currentStats.tu > maxStats.tu ||
+		currentStats.stamina > maxStats.stamina ||
+		currentStats.health > maxStats.health ||
+		currentStats.bravery > maxStats.bravery ||
+		currentStats.reactions > maxStats.reactions ||
+		currentStats.firing > maxStats.firing ||
+		currentStats.throwing > maxStats.throwing ||
+		currentStats.melee > maxStats.melee ||
+		currentStats.mana > maxStats.mana ||
+		currentStats.strength > maxStats.strength ||
+		currentStats.psiStrength > maxStats.psiStrength ||
+		currentStats.psiSkill > maxStats.psiSkill)
+		return false;
+
 	// Does the soldier have the required commendations?
 	for (const auto& reqd_comm : transformationRule->getRequiredCommendations())
 	{
@@ -1743,9 +1786,6 @@ void Soldier::transform(const Mod *mod, RuleSoldierTransformation *transformatio
 	{
 		_recovery = transformationRule->getRecoveryTime();
 	}
-	_training = false;
-	_returnToTrainingWhenHealed = false;
-	_psiTraining = false;
 
 	// needed, because the armor size may change (also, it just makes sense)
 	sourceSoldier->setCraftAndMoveEquipment(0, base, false);
@@ -1813,6 +1853,19 @@ void Soldier::transform(const Mod *mod, RuleSoldierTransformation *transformatio
 					_nationality = 0;
 				}
 			}
+		}
+
+		// handle training (soldier type change rules)
+		if (sourceSoldierType != _rules && _rules->getTrainingStatCaps().psiSkill <= 0)
+		{
+			// transformed into a new soldier type, which doesn't support psi training
+			_psiTraining = false;
+		}
+		// handle training (recovery rules)
+		if (_training && isWounded())
+		{
+			_training = false;
+			_returnToTrainingWhenHealed = true;
 		}
 
 		// reset soldier rank, if needed

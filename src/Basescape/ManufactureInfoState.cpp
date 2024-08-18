@@ -90,6 +90,8 @@ void ManufactureInfoState::buildUi()
 	_txtUnitDown = new Text(90, 9, 192, 138);
 	_btnEngineerUp = new ArrowButton(ARROW_BIG_UP, 13, 14, 132, 114);
 	_btnEngineerDown = new ArrowButton(ARROW_BIG_DOWN, 13, 14, 132, 136);
+	_btnUnitInfinity = new ArrowButton(ARROW_BIG_UP, 13, 14, 300, 114);
+	_btnUnitMinimum = new ArrowButton(ARROW_BIG_DOWN, 13, 14, 300, 136);
 	_btnUnitUp = new ArrowButton(ARROW_BIG_UP, 13, 14, 284, 114);
 	_btnUnitDown = new ArrowButton(ARROW_BIG_DOWN, 13, 14, 284, 136);
 	_txtAllocated = new Text(40, 16, 128, 88);
@@ -122,6 +124,8 @@ void ManufactureInfoState::buildUi()
 	add(_btnEngineerDown, "button1", "manufactureInfo");
 	add(_txtUnitUp, "text", "manufactureInfo");
 	add(_txtUnitDown, "text", "manufactureInfo");
+	add(_btnUnitInfinity, "button1", "manufactureInfo");
+	add(_btnUnitMinimum, "button1", "manufactureInfo");
 	add(_btnUnitUp, "button1", "manufactureInfo");
 	add(_btnUnitDown, "button1", "manufactureInfo");
 	add(_btnOk, "button2", "manufactureInfo");
@@ -217,6 +221,25 @@ void ManufactureInfoState::buildUi()
 	initProfitInfo();
 	setAssignedEngineer();
 
+	if (Options::oxceBaseManufactureInfinityButton)
+	{
+		if (_production->getRules()->getProducedCraft())
+		{
+			_btnUnitInfinity->setVisible(false);
+			_btnUnitMinimum->setVisible(false);
+		}
+		else
+		{
+			_btnUnitInfinity->onMouseClick((ActionHandler)&ManufactureInfoState::infinityUnitClick, 0);
+			_btnUnitMinimum->onMouseClick((ActionHandler)&ManufactureInfoState::minimumUnitClick, 0);
+		}
+	}
+	else
+	{
+		_btnUnitInfinity->setVisible(false);
+		_btnUnitMinimum->setVisible(false);
+	}
+
 	_txtHoursPerUnit->setText(tr("STR_HOURS_PER_UNIT").arg(_production->getRules()->getManufactureTime()));
 
 	_timerMoreEngineer = new Timer(250);
@@ -243,8 +266,8 @@ void ManufactureInfoState::initProfitInfo ()
 	{
 		for (auto& pair : manuf->getProducedItems())
 		{
-			int64_t adjustedSellValue = pair.first->getSellCost();
-			adjustedSellValue = adjustedSellValue * pair.second * _game->getSavedGame()->getSellPriceCoefficient() / 100;
+			int64_t adjustedSellValue = pair.first->getSellCostAdjusted(_base, _game->getSavedGame());
+			adjustedSellValue *= pair.second;
 			_producedItemsValue += adjustedSellValue;
 		}
 	}
@@ -377,6 +400,7 @@ void ManufactureInfoState::moreEngineer(int change)
 	}
 	else if (availableWorkSpace <= 0 && availableEngineer > 0 && _production->isQueuedOnly() && _production->getRules()->getRequiredSpace() > 0)
 	{
+		_timerMoreEngineer->stop();
 		_game->pushState(new ErrorMessageState(
 			tr("STR_NOT_ENOUGH_WORK_SPACE"),
 			_palette,
@@ -544,6 +568,25 @@ void ManufactureInfoState::moreUnitClick(Action *action)
 }
 
 /**
+ * Increases the "units to produce" to infinite ("right-click button" on mobile platforms).
+ * @param action A pointer to an Action.
+ */
+void ManufactureInfoState::infinityUnitClick(Action* action)
+{
+	if (_production->getInfiniteAmount()) return; // We can't increase over infinite :)
+
+	if (_production->getRules()->getProducedCraft())
+	{
+		// nothing
+	}
+	else
+	{
+		_production->setInfiniteAmount(true);
+		setAssignedEngineer();
+	}
+}
+
+/**
  * Removes the given number of units to produce from the project if possible.
  * @param change How much we want to subtract.
  */
@@ -627,6 +670,17 @@ void ManufactureInfoState::lessUnitClick(Action *action)
 			lessUnit(1);
 		}
 	}
+}
+
+/**
+ * Decreases the units to produce ("right-click button" on mobile platforms).
+ * @param action A pointer to an Action.
+ */
+void ManufactureInfoState::minimumUnitClick(Action* action)
+{
+	_production->setInfiniteAmount(false);
+	_production->setAmountTotal(_production->getAmountProduced() + 1);
+	setAssignedEngineer();
 }
 
 /**

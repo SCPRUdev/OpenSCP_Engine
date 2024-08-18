@@ -35,6 +35,7 @@
 #include "../Engine/SurfaceSet.h"
 #include "../Savegame/BattleItem.h"
 #include "../Mod/RuleItem.h"
+#include "../Mod/RuleItemCategory.h"
 #include "../Savegame/BattleUnit.h"
 #include "../Engine/Action.h"
 #include "../Engine/Sound.h"
@@ -108,6 +109,7 @@ Inventory::Inventory(Game *game, int width, int height, int x, int y, bool base)
 
 	_groundSlotsX = (Screen::ORIGINAL_WIDTH - _inventorySlotGround->getX()) / RuleInventory::SLOT_W;
 	_groundSlotsY = (Screen::ORIGINAL_HEIGHT - _inventorySlotGround->getY()) / RuleInventory::SLOT_H;
+	_xMax = 0;
 	_occupiedSlotsCache.resize(_groundSlotsY, std::vector<char>(_groundSlotsX * 2, false));
 }
 
@@ -171,7 +173,7 @@ void Inventory::setSelectedUnit(BattleUnit *unit, bool resetGroundOffset)
 	_selUnit = unit;
 	if (resetGroundOffset)
 	{
-		_groundOffset = 999;
+		_groundOffset = 9999;
 		arrangeGround(1);
 	}
 }
@@ -277,17 +279,17 @@ void Inventory::drawGridLabels(bool showTuCost)
 		// Draw label
 		text.setX(i->getX());
 		text.setY(i->getY() - text.getFont()->getHeight() - text.getFont()->getSpacing());
-		if (showTuCost && _selItem != 0)
+		if (showTuCost && _selItem != 0 && _selItem->getSlot() != i)
 		{
 			std::ostringstream ss;
-			ss << _game->getLanguage()->getString(i->getId());
+			ss << _game->getLanguage()->getString(i->getId()).arg(1 + _groundOffset / _groundSlotsX).arg(1 + _xMax / _groundSlotsX);
 			ss << ":";
 			ss << _selItem->getMoveToCost(i);
 			text.setText(ss.str().c_str());
 		}
 		else
 		{
-			text.setText(_game->getLanguage()->getString(i->getId()));
+			text.setText(_game->getLanguage()->getString(i->getId()).arg(1 + _groundOffset / _groundSlotsX).arg(1 + _xMax / _groundSlotsX));
 		}
 		text.blit(_gridLabels->getSurface());
 	}
@@ -501,7 +503,7 @@ std::vector<std::vector<char>>* Inventory::clearOccupiedSlotsCache()
  * @param x X position in slot.
  * @param y Y position in slot.
  */
-void Inventory::moveItem(BattleItem *item, RuleInventory *slot, int x, int y)
+void Inventory::moveItem(BattleItem *item, const RuleInventory *slot, int x, int y)
 {
 	_game->getSavedGame()->getSavedBattle()->getTileEngine()->itemMoveInventory(_selUnit->getTile(), _selUnit, item, slot, x, y);
 }
@@ -516,7 +518,7 @@ void Inventory::moveItem(BattleItem *item, RuleInventory *slot, int x, int y)
  * @param y Y position in slot.
  * @return If there's overlap.
  */
-bool Inventory::overlapItems(BattleUnit *unit, BattleItem *item, RuleInventory *slot, int x, int y)
+bool Inventory::overlapItems(BattleUnit *unit, BattleItem *item, const RuleInventory *slot, int x, int y)
 {
 	if (slot->getType() != INV_GROUND)
 	{
@@ -743,56 +745,124 @@ void Inventory::mouseClick(Action *action, State *state)
 					}
 					else if (_game->isCtrlPressed())
 					{
-						RuleInventory *newSlot = _inventorySlotGround;
+						const RuleInventory* newSlot = _inventorySlotGround;
 						std::string warning = "STR_NOT_ENOUGH_SPACE";
 						bool placed = false;
 
 						if (slot->getType() == INV_GROUND)
 						{
-							switch (item->getRules()->getBattleType())
+							// B1 - default slot by item
+							if (!placed)
 							{
-							case BT_FIREARM:
-								newSlot = _inventorySlotRightHand;
-								break;
-							case BT_MINDPROBE:
-							case BT_PSIAMP:
-							case BT_MELEE:
-							case BT_CORPSE:
-								newSlot = _inventorySlotLeftHand;
-								break;
-							default:
-								if (item->getRules()->getInventoryHeight() > 2)
+								_stackLevel[item->getSlotX()][item->getSlotY()] -= 1;
+
+								if (item->getRules()->getDefaultInventorySlot() && item->getRules()->getDefaultInventorySlot()->getType() != INV_GROUND)
 								{
-									newSlot = _inventorySlotBackPack;
+									newSlot = item->getRules()->getDefaultInventorySlot();
+
+									placed = fitItem(newSlot, item, warning);
 								}
-								else
+							}
+
+							// B2 - slot order by item category
+							if (!placed)
+							{
+								auto* cat = item->getRules()->getFirstCategoryWithInvOrder(_game->getMod());
+								if (cat)
 								{
-									newSlot = _inventorySlotBelt;
+									for (const auto& s : cat->getInvOrder())
+									{
+										if (placed)
+										{
+											break; // loop finished
+										}
+										newSlot = _game->getMod()->getInventory(s);
+										if (newSlot->getType() == INV_GROUND)
+										{
+											continue;
+										}
+										placed = fitItem(newSlot, item, warning);
+									}
 								}
-								break;
+							}
+
+							// A1 - vanilla default attempt
+							if (!placed)
+							{
+								// reset
+								_stackLevel[item->getSlotX()][item->getSlotY()] += 1;
+								newSlot = _inventorySlotGround;
+
+								switch (item->getRules()->getBattleType())
+								{
+								case BT_FIREARM:
+									newSlot = _inventorySlotRightHand;
+									break;
+								case BT_MINDPROBE:
+								case BT_PSIAMP:
+								case BT_MELEE:
+								case BT_CORPSE:
+									newSlot = _inventorySlotLeftHand;
+									break;
+								default:
+									if (item->getRules()->getInventoryHeight() > 2)
+									{
+										newSlot = _inventorySlotBackPack;
+									}
+									else
+									{
+										newSlot = _inventorySlotBelt;
+									}
+									break;
+								}
 							}
 						}
 
 						if (newSlot->getType() != INV_GROUND)
 						{
-							_stackLevel[item->getSlotX()][item->getSlotY()] -= 1;
+							// A1 - vanilla default attempt
+							if (!placed)
+							{
+								_stackLevel[item->getSlotX()][item->getSlotY()] -= 1;
 
-							placed = fitItem(newSlot, item, warning);
+								placed = fitItem(newSlot, item, warning);
+							}
 
 							if (!placed)
 							{
-								for (const auto& wildCard : *_game->getMod()->getInventories())
+								if (Mod::EXTENDED_INVENTORY_SLOT_SORTING)
 								{
-									if (placed)
+									// B3 - fallback: slot order by listOrder
+									for (const auto& s : _game->getMod()->getInvsList())
 									{
-										break; // loop finished
+										if (placed)
+										{
+											break; // loop finished
+										}
+										newSlot = _game->getMod()->getInventory(s);
+										if (newSlot->getType() == INV_GROUND)
+										{
+											continue;
+										}
+										placed = fitItem(newSlot, item, warning);
 									}
-									newSlot = wildCard.second;
-									if (newSlot->getType() == INV_GROUND)
+								}
+								else
+								{
+									// A2 - fallback: vanilla alphabetical slot order
+									for (const auto& wildCard : *_game->getMod()->getInventories())
 									{
-										continue;
+										if (placed)
+										{
+											break; // loop finished
+										}
+										newSlot = wildCard.second;
+										if (newSlot->getType() == INV_GROUND)
+										{
+											continue;
+										}
+										placed = fitItem(newSlot, item, warning);
 									}
-									placed = fitItem(newSlot, item, warning);
 								}
 							}
 							if (!placed)
@@ -1398,7 +1468,7 @@ void Inventory::arrangeGround(int alterOffset)
 	int y = 0;
 	bool donePlacing = false;
 	bool canPlace = false;
-	int xMax = 0;
+	_xMax = 0;
 	_stackLevel.clear();
 
 	if (_selUnit != 0)
@@ -1476,7 +1546,7 @@ void Inventory::arrangeGround(int alterOffset)
 
 				// Start searching at the x value where we last placed an item of this size.
 				// But also don't let more than half a screen behind the furtherst item (because we want to keep similar items together).
-				x = std::max(xMax - slotsX/2, startIndexCacheX[itemTypeSample->getRules()->getInventoryHeight()][itemTypeSample->getRules()->getInventoryWidth()]);
+				x = std::max(_xMax - slotsX/2, startIndexCacheX[itemTypeSample->getRules()->getInventoryHeight()][itemTypeSample->getRules()->getInventoryWidth()]);
 				y = 0;
 				donePlacing = false;
 				while (!donePlacing)
@@ -1499,7 +1569,7 @@ void Inventory::arrangeGround(int alterOffset)
 					}
 					if (canPlace) // Found a place for this item stack.
 					{
-						xMax = std::max(xMax, x + itemTypeSample->getRules()->getInventoryWidth());
+						_xMax = std::max(_xMax, x + itemTypeSample->getRules()->getInventoryWidth());
 						if ( (x + startIndexCacheX[0].size() ) >= occupiedSlots[0].size())
 						{
 							// Filled enough for the widest item to potentially request occupancy checks outside of current cache. Expand slot cache.
@@ -1551,7 +1621,7 @@ void Inventory::arrangeGround(int alterOffset)
 	}
 	if (alterOffset > 0)
 	{
-		if (xMax >= _groundOffset + slotsX)
+		if (_xMax >= _groundOffset + slotsX)
 		{
 			_groundOffset += slotsX;
 		}
@@ -1568,13 +1638,14 @@ void Inventory::arrangeGround(int alterOffset)
 		// if too much, as many steps forward as possible
 		if (_groundOffset < 0)
 		{
-			while (xMax >= _groundOffset + slotsX)
+			while (_xMax >= _groundOffset + slotsX)
 			{
 				_groundOffset += slotsX;
 			}
 		}
 	}
 	drawItems();
+	drawGridLabels(!Options::oxceDisableInventoryTuCost);
 }
 
 /**
@@ -1584,7 +1655,7 @@ void Inventory::arrangeGround(int alterOffset)
  * @param warning Warning message if item could not be placed.
  * @return True, if the item was successfully placed in the inventory.
  */
-bool Inventory::fitItem(RuleInventory *newSlot, BattleItem *item, std::string &warning)
+bool Inventory::fitItem(const RuleInventory *newSlot, BattleItem *item, std::string &warning)
 {
 	// Check if this inventory section supports the item
 	if (!item->getRules()->canBePlacedIntoInventorySection(newSlot))

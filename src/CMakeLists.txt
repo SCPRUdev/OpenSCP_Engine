@@ -54,6 +54,7 @@ set ( basescape_src
   Basescape/SoldiersState.cpp
   Basescape/SoldierTransformationState.cpp
   Basescape/SoldierTransformationListState.cpp
+  Basescape/SoldierTransformState.cpp
   Basescape/StoresState.cpp
   Basescape/TechTreeSelectState.cpp
   Basescape/TechTreeViewerState.cpp
@@ -231,6 +232,7 @@ set ( interface_src
   Interface/Frame.cpp
   Interface/ImageButton.cpp
   Interface/NumberText.cpp
+  Interface/ProgressBar.cpp
   Interface/ScrollBar.cpp
   Interface/Slider.cpp
   Interface/Text.cpp
@@ -515,9 +517,12 @@ set ( openxcom_src ${c_src} ${cxx_src} ${embed_src} )
 set ( install_dest RUNTIME )
 set ( set_exec_path ON )
 set ( install_dest_dir bin )
+if ( NOT "${DATADIR}" STREQUAL "" )
+  add_definitions( -DDATADIR="${DATADIR}" )
+endif ()
 if ( UNIX AND NOT APPLE )
   set ( data_install_dir "${CMAKE_INSTALL_FULL_DATADIR}/openxcom" )
-  set_property ( SOURCE main.cpp APPEND PROPERTY COMPILE_DEFINITIONS DATADIR="${data_install_dir}/" )
+  set_property ( SOURCE main.cpp APPEND PROPERTY COMPILE_DEFINITIONS INSTALLDIR="${data_install_dir}/" )
 endif ()
 if ( APPLE )
   set ( sdl_src "${MACOS_SDLMAIN_M_PATH}" )
@@ -544,7 +549,7 @@ if ( APPLE )
     endif ()
   else ()
     set ( data_install_dir "${CMAKE_INSTALL_FULL_DATADIR}/openxcom" )
-    add_definitions( -DDATADIR="${data_install_dir}/" )
+    add_definitions( -DINSTALLDIR="${data_install_dir}/" )
   endif ()
 endif ()
 if ( set_exec_path )

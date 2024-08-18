@@ -579,7 +579,7 @@ void GeoscapeState::handle(Action *action)
 						auto* item = _game->getMod()->getItem(itemType);
 						if (item && item->isRecoverable() && !item->isAlien() && item->getSellCost() > 0)
 						{
-							xbase->getStorageItems()->addItem(itemType, 2);
+							xbase->getStorageItems()->addItem(item, 2);
 						}
 					}
 				}
@@ -595,7 +595,7 @@ void GeoscapeState::handle(Action *action)
 						auto* item = _game->getMod()->getItem(itemType);
 						if (item && item->isRecoverable() && item->isAlien() && item->getSellCost() > 0)
 						{
-							xbase->getStorageItems()->addItem(itemType, 2);
+							xbase->getStorageItems()->addItem(item, 2);
 						}
 					}
 				}
@@ -730,6 +730,7 @@ void GeoscapeState::init()
 		!_game->getSavedGame()->getBases()->front()->getName().empty())
 	{
 		_game->getSavedGame()->addMonth();
+		_game->getSavedGame()->increaseDaysPassed();
 		determineAlienMissions();
 		_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() - (_game->getSavedGame()->getBaseMaintenance() - _game->getSavedGame()->getBases()->front()->getPersonnelMaintenance()));
 	}
@@ -781,7 +782,15 @@ void GeoscapeState::timeDisplay()
 {
 	if (Options::showFundsOnGeoscape)
 	{
-		_txtFunds->setText(Unicode::formatFunding(_game->getSavedGame()->getFunds()));
+		if (Options::oxceGeoShowScoreInsteadOfFunds)
+		{
+			// it's a cheat (you're not supposed to see this info in real time), for debugging only
+			_txtFunds->setText(std::to_string(_game->getSavedGame()->getCurrentScore(_game->getSavedGame()->getMonthsPassed() + 1)));
+		}
+		else
+		{
+			_txtFunds->setText(Unicode::formatFunding(_game->getSavedGame()->getFunds()));
+		}
 	}
 
 	std::ostringstream ss;
@@ -1026,7 +1035,7 @@ void GeoscapeState::time5Seconds()
 				if (Options::oxceUfoLandingAlert && ufo->getStatus() == Ufo::LANDED && ufo->getDetected() && ufo->getLandId() != 0)
 				{
 					std::string msg = tr("STR_UFO_HAS_LANDED").arg(ufo->getName(_game->getLanguage()));
-					popup(new CraftErrorState(this, msg));
+					popup(new CraftErrorState(this, msg, true, ufo));
 				}
 				if (detected != ufo->getDetected() && !ufo->getFollowers()->empty())
 				{
@@ -2115,6 +2124,23 @@ void GeoscapeState::time1Hour()
 		}
 	}
 
+	// Handle base defenses maintenance
+	for (auto* xbase : *_game->getSavedGame()->getBases())
+	{
+		for (auto* facility : *xbase->getFacilities())
+		{
+			auto* ammo = facility->rearm();
+			if (ammo)
+			{
+				std::string msg = tr("STR_NOT_ENOUGH_ITEM_TO_REARM_FACILITY_AT_BASE")
+					.arg(tr(ammo->getType()))
+					.arg(tr(facility->getRules()->getType()))
+					.arg(xbase->getName());
+				popup(new CraftErrorState(this, msg));
+			}
+		}
+	}
+
 	// Handle transfers
 	bool window = false;
 	for (auto* xbase : *_game->getSavedGame()->getBases())
@@ -2160,10 +2186,9 @@ void GeoscapeState::time1Hour()
 			if (!_game->getSavedGame()->getAlienContainmentChecked())
 			{
 				std::map<int, int> prisonTypes;
-				RuleItem *rule = nullptr;
 				for (const auto& item : *xbase->getStorageItems()->getContents())
 				{
-					rule = _game->getMod()->getItem(item.first, true);
+					const RuleItem* rule = item.first;
 					if (rule->isAlien())
 					{
 						prisonTypes[rule->getPrisonType()] += 1;
@@ -2314,6 +2339,8 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
  */
 void GeoscapeState::time1Day()
 {
+	_game->getSavedGame()->increaseDaysPassed();
+
 	SavedGame *saveGame = _game->getSavedGame();
 	Mod *mod = _game->getMod();
 	bool psiStrengthEval = (Options::psiStrengthEval && saveGame->isResearched(mod->getPsiRequirements()));
@@ -2382,7 +2409,7 @@ void GeoscapeState::time1Day()
 					auto* ruleCorpse = ruleUnit->getArmor()->getCorpseGeoscape();
 					if (ruleCorpse && ruleCorpse->isRecoverable() && ruleCorpse->isCorpseRecoverable())
 					{
-						xbase->getStorageItems()->addItem(ruleCorpse->getType());
+						xbase->getStorageItems()->addItem(ruleCorpse);
 					}
 				}
 			}
@@ -2698,8 +2725,19 @@ void GeoscapeState::time1Day()
 	}
 
 	// Autosave 3 times a month
+	bool performGeoAutosave = false;
 	int day = saveGame->getTime()->getDay();
-	if (day == 10 || day == 20)
+	if (Options::oxceGeoAutosaveFrequency == 0 && (day == 10 || day == 20))
+	{
+		// OXC backwards-compatibility
+		performGeoAutosave = true;
+	}
+	else if (Options::oxceGeoAutosaveFrequency >= 1 && Options::oxceGeoAutosaveFrequency <= 10)
+	{
+		// every X-th day
+		performGeoAutosave = (saveGame->getDaysPassed() % Options::oxceGeoAutosaveFrequency == 0);
+	}
+	if (performGeoAutosave)
 	{
 		if (saveGame->isIronman())
 		{
@@ -2707,7 +2745,7 @@ void GeoscapeState::time1Day()
 		}
 		else if (Options::autosave)
 		{
-			popup(new SaveGameState(OPT_GEOSCAPE, SAVE_AUTO_GEOSCAPE, _palette));
+			popup(new SaveGameState(OPT_GEOSCAPE, SAVE_AUTO_GEOSCAPE, _palette, saveGame->getDaysPassed()));
 		}
 	}
 	else if (saveGame->getEnding() != END_NONE && saveGame->isIronman())

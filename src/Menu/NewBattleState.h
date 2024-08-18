@@ -25,11 +25,12 @@
 namespace OpenXcom
 {
 
-enum class NewBattleSelectType { MISSION = 0, TERRAIN, ALIENRACE };
+enum class NewBattleSelectType { MISSION = 0, TERRAIN, ALIENRACE, GLOBETEXTURE };
 
 class TextButton;
 class TextEdit;
 class TextList;
+class ToggleTextButton;
 class Window;
 class Text;
 class ComboBox;
@@ -53,13 +54,21 @@ private:
 	Slider *_slrDarkness, *_slrAlienTech, *_slrDepth;
 	TextButton *_btnOk, *_btnCancel, *_btnEquip, *_btnRandom;
 	TextButton *_btnMission, *_btnTerrain, *_btnAlienRace;
+	Text *_txtGlobeTexture;
+	TextButton *_btnGlobeTexture;
+	TextButton *_btnGlobeTextureToggle;
+	ToggleTextButton *_btnUfoCrashed;
 	TextList *_lstSelect;
 	TextEdit *_btnQuickSearch;
 	std::map<Surface*, bool> _surfaceBackup;
 	std::vector<std::string> _missionTypes, _terrainTypes, _alienRaces, _crafts;
+	std::vector<std::string> _globeTextures;
+	std::vector<int> _globeTextureIDs;
 	Craft *_craft;
 	NewBattleSelectType _selectType;
 	bool _isRightClick;
+	bool _depthVisible, _globeTextureVisible;
+	size_t _selectedGlobeTexture;
 	std::vector<size_t> _filtered;
 
 	static const int TFTD_DEPLOYMENTS = 22;
@@ -70,6 +79,8 @@ public:
 	NewBattleState();
 	/// Cleans up the New Battle state.
 	~NewBattleState();
+	/// Handle keypresses.
+	void handle(Action* action) override;
 	/// Resets state.
 	void init() override;
 	/// Loads New Battle settings.
@@ -96,6 +107,9 @@ public:
 	void btnMissionChange(Action *action);
 	/// Handler for clicking the Terrain... button.
 	void btnTerrainChange(Action *action);
+	/// Handlers for clicking the Globe Texture buttons.
+	void btnGlobeTextureChange(Action *action);
+	void btnGlobeTextureToggle(Action *action);
 	/// Handler for clicking the Alien Race... button.
 	void btnAlienRaceChange(Action *action);
 	/// Handler for clicking the Select list.

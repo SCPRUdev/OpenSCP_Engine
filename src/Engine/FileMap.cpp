@@ -818,13 +818,17 @@ static bool mapExtResources(ModRecord *mrec, const std::string& basename, bool e
 		}
 		if (CrossPlatform::fileExists(fullname)) {
 			Log(LOG_VERBOSE) << log_ctx << "found zip ("<<fullname<<")";
-			auto layer = new VFSLayer(fullname);
-			if (layer->mapZipFile(fullname, "", true)) {
-				mrec->push_front(layer);
-				MappedVFSLayers.insert(layer);
+			auto layer = std::make_unique<VFSLayer>(fullname);
+			auto mapped = layer->mapZipFile(fullname, basename + "/", true);
+			if (!mapped) {
+				// some garbage can stay in `layer` after failed mapping, clean up and try different path
+				layer = std::make_unique<VFSLayer>(fullname);
+				mapped = layer->mapZipFile(fullname, "", true);
+			}
+			if (mapped) {
+				mrec->push_front(layer.get());
+				MappedVFSLayers.insert(layer.release());
 				mapped_anything = true;
-			} else {
-				delete layer;
 			}
 		} else {
 			Log(LOG_VERBOSE) << log_ctx << "zip not found ("<<fullname<<")";
@@ -1019,7 +1023,7 @@ SDL_RWops *zipGetFileByName(const std::string& zipfile, const std::string& fullp
 void scanModDir(const std::string& dirname, const std::string& basename, bool protectedLocation) {
 
 	// "standard" directory is for built-in mods only! otherwise automatic updates would delete user data
-	const std::set<std::string> standardMods = {
+	const static std::set<std::string> standardMods = {
 		"Aliens_Pick_Up_Weapons",
 		"Aliens_Pick_Up_Weapons_TFTD",
 		"Demigod_Difficulty",
@@ -1029,6 +1033,8 @@ void scanModDir(const std::string& dirname, const std::string& basename, bool pr
 		"OpenXCom_Unlimited_Waypoints",
 		"OpenXCom_Unlimited_Waypoints_TFTD",
 		"PSX_Static_Cydonia_Map",
+		"Smarter_Equip",
+		"Smarter_Equip_TFTD",
 		"StrategyCore_Swap_Small_USOs_TFTD",
 		"TFTD_Damage",
 		"UFOextender_Gun_Melee",

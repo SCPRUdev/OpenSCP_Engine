@@ -107,6 +107,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	// Create objects
 	_bg = new Surface(320, 200, 0, 0);
 	_soldier = new Surface(320, 200, 0, 0);
+	_txtPosition = new Text(70, 9, 65, 95);
 	_txtName = new TextEdit(this, 210, 17, 28, 6);
 	_txtTus = new Text(40, 9, 245, 24);
 	_txtWeight = new Text(70, 9, 245, 24);
@@ -169,6 +170,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	add(_btnLinks, "buttonLinks", "inventory", _bg);
 	add(_selAmmo);
 	add(_inv);
+	add(_txtPosition, "textSlot", "inventory", _bg);
 
 	// move the TU display down to make room for the weight display
 	if (Options::showMoreStatsInInventoryView)
@@ -179,6 +181,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	centerAllSurfaces();
 
 
+	_txtPosition->setHighContrast(true);
 
 	_txtName->setBig();
 	_txtName->setHighContrast(true);
@@ -214,7 +217,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::btnApplyPersonalTemplateClick, Options::keyInvLoadPersonalEquipment);
 	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::btnShowPersonalTemplateClick, Options::keyInvShowPersonalEquipment);
 	_btnOk->setTooltip("STR_OK");
-	_btnOk->onMouseIn((ActionHandler)&InventoryState::txtTooltipIn);
+	_btnOk->onMouseIn((ActionHandler)&InventoryState::txtTooltipInExtraOK);
 	_btnOk->onMouseOut((ActionHandler)&InventoryState::txtTooltipOut);
 	_btnOk->onKeyboardPress((ActionHandler)&InventoryState::invMouseOver, SDLK_LALT);
 	_btnOk->onKeyboardRelease((ActionHandler)&InventoryState::invMouseOver, SDLK_LALT);
@@ -413,6 +416,29 @@ void InventoryState::init()
 
 	_soldier->clear();
 	_btnRank->clear();
+
+	if (Options::oxceInventoryShowUnitSlot)
+	{
+		int unitSlot = 1;
+		int totalSlots = 99;
+		for (auto* tmpUnit : *_battleGame->getUnits())
+		{
+			if (tmpUnit == unit)
+			{
+				if (!_noCraft && _battleGame->getMissionType() != "STR_BASE_DEFENSE")
+				{
+					auto* tmpCraft = unit->getGeoscapeSoldier() ? unit->getGeoscapeSoldier()->getCraft() : nullptr;
+					if (tmpCraft)
+					{
+						totalSlots = tmpCraft->getMaxUnitsClamped();
+					}
+				}
+				break;
+			}
+			unitSlot += tmpUnit->getArmor()->getTotalSize();
+		}
+		_txtPosition->setText(tr("STR_SLOT").arg(unitSlot).arg(totalSlots));
+	}
 
 	_txtName->setBig();
 	_txtName->setText(unit->getName(_game->getLanguage()));
@@ -1077,7 +1103,7 @@ void InventoryState::btnOkClick(Action *)
 				if (!soldier->getCraft() && c && c->getStatus() != "STR_OUT")
 				{
 					int space = c->getSpaceAvailable();
-					if (c->validateAddingSoldier(space, soldier))
+					if (c->validateAddingSoldier(space, soldier) == CPE_None)
 					{
 						soldier->setCraftAndMoveEquipment(c, _base, _game->getSavedGame()->getMonthsPassed() == -1, _resetCustomDeploymentBackup);
 					}
@@ -1336,14 +1362,14 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 		bool found = false;
 
 		bool needsAmmo[RuleItem::AmmoSlotMax] = { };
-		std::string targetAmmo[RuleItem::AmmoSlotMax] = { };
+		const RuleItem* targetAmmo[RuleItem::AmmoSlotMax] = { };
 		BattleItem *matchedWeapon = nullptr;
 		BattleItem *matchedAmmo[RuleItem::AmmoSlotMax] = { };
 
 		for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 		{
 			targetAmmo[slot] = equipmentLayoutItem->getAmmoItemForSlot(slot);
-			needsAmmo[slot] = (targetAmmo[slot] != "NONE");
+			needsAmmo[slot] = (targetAmmo[slot] != nullptr);
 			matchedAmmo[slot] = nullptr;
 		}
 
@@ -1351,12 +1377,12 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 		{
 			// if we find the appropriate ammo, remember it for later for if we find
 			// the right weapon but with the wrong ammo
-			const std::string groundItemName = groundItem->getRules()->getType();
+			auto* groundItemRule = groundItem->getRules();
 
 			bool skipAmmo = false;
 			for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 			{
-				if (needsAmmo[slot] && !matchedAmmo[slot] && targetAmmo[slot] == groundItemName)
+				if (needsAmmo[slot] && !matchedAmmo[slot] && targetAmmo[slot] == groundItemRule)
 				{
 					matchedAmmo[slot] = groundItem;
 					skipAmmo = true;
@@ -1367,7 +1393,7 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 				continue;
 			}
 
-			if (equipmentLayoutItem->isFixed() == false && equipmentLayoutItem->getItemType() == groundItemName)
+			if (equipmentLayoutItem->isFixed() == false && equipmentLayoutItem->getItemType() == groundItemRule)
 			{
 				// if the loaded ammo doesn't match the template item's,
 				// remember the weapon for later and continue scanning
@@ -1379,7 +1405,7 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 						continue;
 					}
 					BattleItem *loadedAmmo = groundItem->getAmmoForSlot(slot);
-					if ((needsAmmo[slot] && (!loadedAmmo || targetAmmo[slot] != loadedAmmo->getRules()->getType()))
+					if ((needsAmmo[slot] && (!loadedAmmo || targetAmmo[slot] != loadedAmmo->getRules()))
 						|| (!needsAmmo[slot] && loadedAmmo))
 					{
 						// remember the last matched weapon for simplicity (but prefer empty weapons if any are found)
@@ -1408,10 +1434,10 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 					// this is not a fixed item, continue searching...
 					continue;
 				}
-				if (fixedItem->getSlot()->getId() == equipmentLayoutItem->getSlot() &&
+				if (fixedItem->getSlot() == equipmentLayoutItem->getSlot() &&
 					fixedItem->getSlotX() == equipmentLayoutItem->getSlotX() &&
 					fixedItem->getSlotY() == equipmentLayoutItem->getSlotY() &&
-					fixedItem->getRules()->getType() == equipmentLayoutItem->getItemType())
+					fixedItem->getRules() == equipmentLayoutItem->getItemType())
 				{
 					// if the loaded ammo doesn't match the template item's,
 					// remember the weapon for later and continue scanning
@@ -1423,7 +1449,7 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 							continue;
 						}
 						BattleItem* loadedAmmo = fixedItem->getAmmoForSlot(slot);
-						if ((needsAmmo[slot] && (!loadedAmmo || targetAmmo[slot] != loadedAmmo->getRules()->getType()))
+						if ((needsAmmo[slot] && (!loadedAmmo || targetAmmo[slot] != loadedAmmo->getRules()))
 							|| (!needsAmmo[slot] && loadedAmmo))
 						{
 							// remember the last matched weapon for simplicity (but prefer empty weapons if any are found)
@@ -1492,13 +1518,13 @@ void InventoryState::_applyInventoryTemplate(std::vector<EquipmentLayoutItem*> &
 		if (matchedWeapon && !_inv->overlapItems(
 			unit,
 			matchedWeapon,
-			_game->getMod()->getInventory(equipmentLayoutItem->getSlot(), true),
+			equipmentLayoutItem->getSlot(),
 			equipmentLayoutItem->getSlotX(),
 			equipmentLayoutItem->getSlotY()))
 		{
 			// move matched item from ground to the appropriate inventory slot
 			matchedWeapon->moveToOwner(unit);
-			matchedWeapon->setSlot(_game->getMod()->getInventory(equipmentLayoutItem->getSlot()));
+			matchedWeapon->setSlot(equipmentLayoutItem->getSlot());
 			matchedWeapon->setSlotX(equipmentLayoutItem->getSlotX());
 			matchedWeapon->setSlotY(equipmentLayoutItem->getSlotY());
 			matchedWeapon->setFuseTimer(equipmentLayoutItem->getFuseTimer());
@@ -1958,13 +1984,13 @@ void InventoryState::onMoveGroundInventoryToBase(Action *)
 	// step 1: move stuff from craft to base
 	for (auto* bi : *groundInv)
 	{
-		const auto& weaponType = bi->getRules()->getType();
+		const auto& weaponType = bi->getRules();
 		// check all ammo slots first
 		for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 		{
 			if (bi->getAmmoForSlot(slot))
 			{
-				const auto& ammoType = bi->getAmmoForSlot(slot)->getRules()->getType();
+				const auto& ammoType = bi->getAmmoForSlot(slot)->getRules();
 				// only real ammo
 				if (weaponType != ammoType)
 				{
@@ -2107,6 +2133,46 @@ void InventoryState::think()
 	}
 	State::think();
 }
+
+/**
+ * Shows a tooltip for the OK button.
+ * @param action Pointer to an action.
+ */
+void InventoryState::txtTooltipInExtraOK(Action *action)
+{
+	if (_inv->getSelectedItem() == 0 && Options::battleTooltips)
+	{
+		_currentTooltip = action->getSender()->getTooltip();
+
+		std::ostringstream ss;
+		ss << tr(_currentTooltip);
+
+		if (!_tu && !_base)
+		{
+			ss << " - ";
+
+			if (_battleGame->getGlobalShade() <= 0)
+			{
+				// day (0)
+				ss << tr("STR_DAY");
+			}
+			else if (_battleGame->getGlobalShade() > _game->getMod()->getMaxDarknessToSeeUnits())
+			{
+				// night (10-15); note: this is configurable in the ruleset (in OXCE only)
+				ss << tr("STR_NIGHT");
+			}
+			else
+			{
+				// dusk/dawn (1-9)
+				ss << tr("STR_DAY");
+				ss << "*";
+			}
+		}
+
+		_txtItem->setText(ss.str().c_str());
+	}
+}
+
 
 /**
  * Shows a tooltip for the appropriate button.

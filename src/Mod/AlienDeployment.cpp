@@ -17,6 +17,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "AlienDeployment.h"
+#include "MapScript.h"
 #include "../Engine/RNG.h"
 #include "../Mod/Mod.h"
 #include "../fmath.h"
@@ -182,7 +183,8 @@ namespace OpenXcom
  * @param type String defining the type.
  */
 AlienDeployment::AlienDeployment(const std::string &type) :
-	_type(type), _missionBountyItemCount(1), _bughuntMinTurn(0), _width(0), _length(0), _height(0), _civilians(0), _markCiviliansAsVIP(false), _civilianSpawnNodeRank(0),
+	_type(type), _missionBountyItemCount(1), _bughuntMinTurn(0), _forcePercentageOutsideUfo(false),
+	_width(0), _length(0), _height(0), _civilians(0), _markCiviliansAsVIP(false), _civilianSpawnNodeRank(0),
 	_shade(-1), _minShade(-1), _maxShade(-1), _finalDestination(false), _isAlienBase(false), _isHidden(false), _fakeUnderwaterSpawnChance(0),
 	_alert("STR_ALIENS_TERRORISE"), _alertBackground("BACK03.SCR"), _alertDescription(""), _alertSound(-1),
 	_markerName("STR_TERROR_SITE"), _markerIcon(-1), _durationMin(0), _durationMax(0), _minDepth(0), _maxDepth(0),
@@ -238,6 +240,7 @@ void AlienDeployment::load(const YAML::Node &node, Mod *mod)
 	_missionBountyItem = node["missionBountyItem"].as<std::string>(_missionBountyItem);
 	_missionBountyItemCount = node["missionBountyItemCount"].as<int>(_missionBountyItemCount);
 	_bughuntMinTurn = node["bughuntMinTurn"].as<int>(_bughuntMinTurn);
+	_forcePercentageOutsideUfo = node["forcePercentageOutsideUfo"].as<bool>(_forcePercentageOutsideUfo);
 	_data = node["data"].as< std::vector<DeploymentData> >(_data);
 	_reinforcements = node["reinforcements"].as< std::vector<ReinforcementsData> >(_reinforcements);
 	_width = node["width"].as<int>(_width);
@@ -538,6 +541,74 @@ const std::string& AlienDeployment::getRandomMapScript() const
 		return _mapScripts[pick];
 	}
 	return _mapScript;
+}
+
+/**
+ * Does any map script use globe terrain?
+ * @return 1 = yes, 0 = no, -1 = no map script found.
+ */
+int AlienDeployment::hasTextureBasedScript(const Mod* mod) const
+{
+	int ret = -1;
+	// iterate _mapScripts
+	for (const std::string& script : _mapScripts)
+	{
+		auto* vec = mod->getMapScript(script);
+		if (vec)
+		{
+			ret = 0;
+			// iterate map script commands
+			for (auto* ms : *vec)
+			{
+				// iterate terrains
+				for (const std::string& terrain : ms->getRandomAlternateTerrain())
+				{
+					if (terrain == "globeTerrain" || terrain == "baseTerrain")
+					{
+						return 1;
+					}
+				}
+				// iterate vertical levels
+				for (auto& vlevel : ms->getVerticalLevels())
+				{
+					if (vlevel.levelTerrain == "globeTerrain" || vlevel.levelTerrain == "baseTerrain")
+					{
+						return 1;
+					}
+				}
+			}
+		}
+	}
+	// check also _mapScript
+	{
+		auto* vec = mod->getMapScript(_mapScript);
+		if (vec)
+		{
+			ret = 0;
+			// iterate map script commands
+			for (auto* ms : *vec)
+			{
+				// iterate terrains
+				for (const std::string& terrain : ms->getRandomAlternateTerrain())
+				{
+					if (terrain == "globeTerrain" || terrain == "baseTerrain")
+					{
+						return 1;
+					}
+				}
+				// iterate vertical levels
+				for (auto& vlevel : ms->getVerticalLevels())
+				{
+					if (vlevel.levelTerrain == "globeTerrain" || vlevel.levelTerrain == "baseTerrain")
+					{
+						return 1;
+					}
+				}
+			}
+		}
+
+	}
+	return ret;
 }
 
 /**

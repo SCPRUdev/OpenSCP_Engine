@@ -739,7 +739,7 @@ void BattlescapeGenerator::nextStage()
 
 	size_t unitCount = _save->getUnits()->size();
 
-	deployAliens(_alienCustomDeploy ? _alienCustomDeploy : ruleDeploy);
+	deployAliens(_alienCustomDeploy && !_alienCustomDeploy->getDeploymentData()->empty() ? _alienCustomDeploy : ruleDeploy);
 
 	if (unitCount == _save->getUnits()->size())
 	{
@@ -916,7 +916,7 @@ void BattlescapeGenerator::run()
 
 	if (!isPreview)
 	{
-		deployAliens(_alienCustomDeploy ? _alienCustomDeploy : ruleDeploy);
+		deployAliens(_alienCustomDeploy && !_alienCustomDeploy->getDeploymentData()->empty() ? _alienCustomDeploy : ruleDeploy);
 	}
 
 	if (!isPreview && unitCount == _save->getUnits()->size())
@@ -948,6 +948,11 @@ void BattlescapeGenerator::run()
 	if (!isPreview && _ufo && _ufo->getStatus() == Ufo::CRASHED)
 	{
 		explodePowerSources();
+	}
+
+	if (!isPreview)
+	{
+		explodeOtherJunk();
 	}
 }
 
@@ -988,7 +993,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 		{
 			for (auto* vehicle : *_craft->getVehicles())
 			{
-				RuleItem *item = vehicle->getRules();
+				const RuleItem *item = vehicle->getRules();
 				bool hwpDisabled = false;
 				if (startingCondition)
 				{
@@ -1120,7 +1125,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 		{
 			for (auto* vehicle : *_craft->getVehicles())
 			{
-				RuleItem *item = vehicle->getRules();
+				const RuleItem *item = vehicle->getRules();
 				bool hwpDisabled = false;
 				if (startingCondition)
 				{
@@ -1222,7 +1227,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 		// add items that are in the craft
 		for (const auto& pair : *_craft->getItems()->getContents())
 		{
-			if (startingCondition != 0 && !startingCondition->isItemPermitted(pair.first, _game->getMod(), _craft))
+			if (startingCondition != 0 && !startingCondition->isItemPermitted(pair.first->getType(), _game->getMod(), _craft))
 			{
 				// send disabled items back to base
 				_base->getStorageItems()->addItem(pair.first, pair.second);
@@ -1244,7 +1249,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 			// add items that are in the base
 			for (auto i = _base->getStorageItems()->getContents()->begin(); i != _base->getStorageItems()->getContents()->end();)
 			{
-				RuleItem *rule = _game->getMod()->getItem(i->first, true);
+				const RuleItem *rule = i->first;
 				if (
 					// is item allowed in base defense?
 					rule->canBeEquippedBeforeBaseDefense() &&
@@ -1260,7 +1265,7 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 					{
 						_save->createItemForTile(i->first, _craftInventoryTile);
 					}
-					std::map<std::string, int>::iterator tmp = i; // copy
+					auto tmp = i; // copy
 					++i;
 					if (!_baseInventory)
 					{
@@ -1702,8 +1707,10 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
 			std::string alienName = dd.customUnitType.empty() ? race->getMember(dd.alienRank) : dd.customUnitType;
 
 			bool outside = RNG::generate(0,99) < dd.percentageOutsideUfo;
-			if (_ufo == 0)
+			if (_ufo == 0 && !deployment->getForcePercentageOutsideUfo())
+			{
 				outside = false;
+			}
 			Unit *rule = _game->getMod()->getUnit(alienName, true);
 			BattleUnit *unit = addAlien(rule, dd.alienRank, outside);
 			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(_save->getAlienItemLevel()).at(RNG::generate(0,9)));
@@ -1869,8 +1876,6 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
 {
 	if (item->getSlot() == _inventorySlotGround)
 	{
-		auto& itemType = item->getRules()->getType();
-
 		// find the first soldier with a matching layout-slot
 		for (auto* unit : *_save->getUnits())
 		{
@@ -1886,9 +1891,7 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
 				// fixed items will be handled elsewhere
 				if (layoutItem->isFixed()) continue;
 
-				if (itemType != layoutItem->getItemType()) continue;
-
-				auto* inventorySlot = _game->getMod()->getInventory(layoutItem->getSlot(), true);
+				if (item->getRules() != layoutItem->getItemType()) continue;
 
 				// we need to check all "slot boxes" for overlap (not just top left)
 				bool overlaps = false;
@@ -1896,7 +1899,7 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
 				{
 					for (int y = 0; y < item->getRules()->getInventoryHeight(); ++y)
 					{
-						if (!overlaps && unit->getItem(inventorySlot, x + layoutItem->getSlotX(), y + layoutItem->getSlotY()))
+						if (!overlaps && unit->getItem(layoutItem->getSlot(), x + layoutItem->getSlotX(), y + layoutItem->getSlotY()))
 						{
 							overlaps = true;
 						}
@@ -1907,7 +1910,7 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
 				int toLoad = 0;
 				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 				{
-					if (layoutItem->getAmmoItemForSlot(slot) != "NONE")
+					if (layoutItem->getAmmoItemForSlot(slot) != nullptr)
 					{
 						++toLoad;
 					}
@@ -1920,10 +1923,9 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
 					{
 						if (ammo->getSlot() == _inventorySlotGround)
 						{
-							auto& ammoType = ammo->getRules()->getType();
 							for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 							{
-								if (ammoType == layoutItem->getAmmoItemForSlot(slot))
+								if (ammo->getRules() == layoutItem->getAmmoItemForSlot(slot))
 								{
 									if (item->setAmmoPreMission(ammo))
 									{
@@ -1945,7 +1947,7 @@ bool BattlescapeGenerator::placeItemByLayout(BattleItem *item, const std::vector
 				if (!toLoad || item->haveAnyAmmo())
 				{
 					item->moveToOwner(unit);
-					item->setSlot(inventorySlot);
+					item->setSlot(layoutItem->getSlot());
 					item->setSlotX(layoutItem->getSlotX());
 					item->setSlotY(layoutItem->getSlotY());
 					if (Options::includePrimeStateInSavedLayout && item->getRules()->getFuseTimerType() != BFT_NONE)
@@ -1983,10 +1985,10 @@ void BattlescapeGenerator::reloadFixedWeaponsByLayout()
 			BattleItem* fixedItem = nullptr;
 			for (auto* item : *unit->getInventory())
 			{
-				if (item->getSlot()->getId() == layoutItem->getSlot() &&
+				if (item->getSlot() == layoutItem->getSlot() &&
 					item->getSlotX() == layoutItem->getSlotX() &&
 					item->getSlotY() == layoutItem->getSlotY() &&
-					item->getRules()->getType() == layoutItem->getItemType())
+					item->getRules() == layoutItem->getItemType())
 				{
 					fixedItem = item;
 					break;
@@ -1997,7 +1999,7 @@ void BattlescapeGenerator::reloadFixedWeaponsByLayout()
 			int toLoad = 0;
 			for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 			{
-				if (layoutItem->getAmmoItemForSlot(slot) != "NONE")
+				if (layoutItem->getAmmoItemForSlot(slot) != nullptr)
 				{
 					++toLoad;
 				}
@@ -2010,10 +2012,9 @@ void BattlescapeGenerator::reloadFixedWeaponsByLayout()
 				{
 					if (ammo->getSlot() == _inventorySlotGround)
 					{
-						auto& ammoType = ammo->getRules()->getType();
 						for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 						{
-							if (ammoType == layoutItem->getAmmoItemForSlot(slot))
+							if (ammo->getRules() == layoutItem->getAmmoItemForSlot(slot))
 							{
 								if (fixedItem->setAmmoPreMission(ammo))
 								{
@@ -2231,6 +2232,70 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 			}
 		}
 	}
+	// extended items
+	for (auto& extItemDef : *mapblock->getExtendedItems())
+	{
+		RuleItem* extRule = _game->getMod()->getItem(extItemDef.type, true);
+		if (extRule->getBattleType() == BT_CORPSE)
+		{
+			throw Exception("Placing corpse items (battleType: 11) on the map is not allowed. Item: " + extRule->getType() + ", map block: " + mapblock->getName());
+		}
+		for (auto& extPos : extItemDef.pos)
+		{
+			if (extPos.x >= mapblock->getSizeX() || extPos.y >= mapblock->getSizeY() || extPos.z >= mapblock->getSizeZ())
+			{
+				ss << "Extended item " << extRule->getType() << " is outside of map block " << mapblock->getName() << ", position: [";
+				ss << extPos.x << "," << extPos.y << "," << extPos.z << "], block size: [";
+				ss << mapblock->getSizeX() << "," << mapblock->getSizeY() << "," << mapblock->getSizeZ() << "]";
+				throw Exception(ss.str());
+			}
+			BattleItem* newExtItem = _save->createItemForTile(extRule, _save->getTile(extPos + Position(xoff, yoff, zoff)));
+			if (extItemDef.fuseTimerMin > -1 && extItemDef.fuseTimerMax > -1 && extItemDef.fuseTimerMin <= extItemDef.fuseTimerMax)
+			{
+				newExtItem->setFuseTimer(RNG::generate(extItemDef.fuseTimerMin, extItemDef.fuseTimerMax));
+			}
+			for (auto& extAmmoDef : extItemDef.ammoDef)
+			{
+				RuleItem* extAmmoRule = _game->getMod()->getItem(extAmmoDef.first, true);
+				if (extAmmoRule)
+				{
+					if (extAmmoRule->getBattleType() == BT_CORPSE)
+					{
+						throw Exception("Placing corpse items (battleType: 11) on the map is not allowed. Ammo item: " + extAmmoRule->getType() + ", map block: " + mapblock->getName());
+					}
+					BattleItem* newExtAmmoItem = _save->createItemForTile(extAmmoRule, _save->getTile(extPos + Position(xoff, yoff, zoff)));
+					if (extAmmoDef.second > 0 && extAmmoDef.second < newExtAmmoItem->getAmmoQuantity())
+					{
+						newExtAmmoItem->setAmmoQuantity(extAmmoDef.second);
+					}
+					if (newExtItem->isWeaponWithAmmo())
+					{
+						int slotAmmo = extRule->getSlotForAmmo(extAmmoRule);
+						if (slotAmmo == -1)
+						{
+							throw Exception("Ammo is not compatible. Weapon: " + extRule->getType() + ", ammo: " + extAmmoRule->getType() + ", map block: " + mapblock->getName());
+						}
+						else
+						{
+							if (newExtItem->getAmmoForSlot(slotAmmo) != 0)
+							{
+								throw Exception("Weapon is already loaded. Weapon: " + extRule->getType() + ", ammo: " + extAmmoRule->getType() + ", map block: " + mapblock->getName());
+							}
+							else
+							{
+								// Put ammo in weapon
+								newExtItem->setAmmoForSlot(slotAmmo, newExtAmmoItem);
+							}
+						}
+					}
+					else
+					{
+						// ammo is not needed, crash or ignore?
+					}
+				}
+			}
+		}
+	}
 
 	return sizez;
 }
@@ -2399,6 +2464,79 @@ void BattlescapeGenerator::explodePowerSources()
 		t->setExplosive(0, 0, true);
 		Position p = t->getPosition().toVoxel() + Position(8,8,0);
 		_save->getTileEngine()->explode({ }, p, power, _game->getMod()->getDamageType(DT_HE), power / 10);
+		t = _save->getTileEngine()->checkForTerrainExplosions();
+	}
+}
+
+/**
+ * Terraforming.
+ */
+void BattlescapeGenerator::explodeOtherJunk()
+{
+	std::vector<BattleItem*> itemsToGoBoom;
+	std::vector<std::tuple<Tile*, const RuleItem*> > explosionParams;
+
+	for (auto* bi : *_save->getItems())
+	{
+		if (bi->isOwnerIgnored() || !bi->getTile())
+		{
+			continue;
+		}
+		if ((!bi->getRules()->getSpawnUnit() && !bi->getRules()->getSpawnItem()) && !bi->getXCOMProperty() && !bi->isSpecialWeapon())
+		{
+			// fuseTimer == 0 cannot be used, because it is already used for "explode after the first player turn"
+			// fuseTimer == -1 is also used, means "unprimed grenade"
+			if (bi->getRules()->getBattleType() == BT_GRENADE && bi->getFuseTimer() == -2 /* && !bi->isFuseEnabled() */)
+			{
+				itemsToGoBoom.push_back(bi);
+				explosionParams.push_back(std::tuple(bi->getTile(), bi->getRules()));
+			}
+		}
+	}
+
+	for (auto* item : itemsToGoBoom)
+	{
+		_save->removeItem(item);
+	}
+
+	for (auto& params : explosionParams)
+	{
+		Tile* tile = std::get<Tile*>(params);
+		const RuleItem* rule = std::get<const RuleItem*>(params);
+
+		Position p = tile->getPosition().toVoxel() + Position(8, 8, -tile->getTerrainLevel());
+		_save->getTileEngine()->explode(
+			{ },
+			p,
+			rule->getPower(),
+			rule->getDamageType(),
+			rule->getExplosionRadius({ })
+		);
+	}
+
+	Tile* t = _save->getTileEngine()->checkForTerrainExplosions();
+	while (t)
+	{
+		ItemDamageType DT;
+		switch (t->getExplosiveType())
+		{
+		case 0:
+			DT = DT_HE;
+			break;
+		case 5:
+			DT = DT_IN;
+			break;
+		case 6:
+			DT = DT_STUN;
+			break;
+		default:
+			DT = DT_SMOKE;
+			break;
+		}
+		int power = t->getExplosive();
+		t->setExplosive(0, 0, true);
+		Position p = t->getPosition().toVoxel() + Position(8, 8, 0);
+		_save->getTileEngine()->explode({ }, p, power, _game->getMod()->getDamageType(DT), power / 10);
 		t = _save->getTileEngine()->checkForTerrainExplosions();
 	}
 }
@@ -2629,7 +2767,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 			uint64_t baseSeed = baseLon * baseLat * 1e6;
 			RNG::setSeed(baseSeed);
 
-			_baseTerrain = _game->getMod()->getTerrain(_missionTexture->getRandomBaseTerrain(target), true);
+			_baseTerrain = _game->getMod()->getTerrain(_globeTexture->getRandomBaseTerrain(target), true);
 			generateBaseMap();
 		}
 		else
@@ -2673,6 +2811,28 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 			if (!execute)
 			{
 				continue;
+			}
+		}
+
+		// if this command runs conditionally based on deployed craft's groups
+		if (_craftDeployed && _craftRules)
+		{
+			if (!command->getCraftGroups().empty())
+			{
+				bool execute = false;
+				// compare the corresponding entries in the craft rules vector
+				for (int grp : command->getCraftGroups())
+				{
+					if (std::find(_craftRules->getGroups().begin(), _craftRules->getGroups().end(), grp) != _craftRules->getGroups().end())
+					{
+						execute = true;
+						break;
+					}
+				}
+				if (!execute)
+				{
+					continue;
+				}
 			}
 		}
 
@@ -3619,6 +3779,14 @@ void BattlescapeGenerator::loadVerticalLevels(MapScript *command, bool repopulat
 					if(block)
 					{
 						z = currentLevel->levelSizeZ == -1 ? block->getSizeZ() : currentLevel->levelSizeZ;
+					}
+					else
+					{
+						++tries; // we failed to find an appropriate block for a command that must explicitly load one, so don't try too hard to keep finding one
+						if(tries > maxTries)
+						{
+							Log(LOG_WARNING) << "Battlescape Generator has encountered an error: a mapscript command or base facility with vertical levels cannot find a map block with the right size/terrain/groups. The modder may want to check that the specified terrain or vertical level size/groups is correct.";
+						}
 					}
 
 					break;

@@ -89,12 +89,15 @@ enum class BattleActionOrigin { CENTRE = 0, LEFT, RIGHT }; // Used for off-centr
 
 struct BattleActionCost;
 class BattleItem;
+class SavedGame;
+class Base;
 class RuleSkill;
 class Unit;
 class SurfaceSet;
 class Surface;
 class Mod;
 class RuleInventory;
+class RuleItemCategory;
 
 enum UnitFaction : int;
 
@@ -291,6 +294,7 @@ private:
 	std::vector<std::string> _categories;
 
 	Unit* _vehicleUnit;
+	int _vehicleFixedAmmoSlot;
 	double _size;
 	int _monthlyBuyLimit;
 	int _costBuy, _costSell, _transferTime, _weight;
@@ -331,6 +335,7 @@ private:
 	RuleItemFuseTrigger _fuseTriggerEvents;
 	bool _hiddenOnMinimap;
 	std::string _medikitActionName, _psiAttackName, _primeActionName, _unprimeActionName, _primeActionMessage, _unprimeActionMessage;
+	std::string _sellActionMessage;
 
 	bool _twoHanded, _blockBothHands, _fixedWeapon, _fixedWeaponShow, _isConsumable, _isFireExtinguisher;
 	bool _isExplodingInHands, _specialUseEmptyHand, _specialUseEmptyHandShow;
@@ -374,6 +379,7 @@ private:
 	int _spawnItemChance = -1;
 
 	int _targetMatrix;
+	bool _convertToCivilian;
 	bool _LOSRequired, _underwaterOnly, _landOnly, _psiReqiured, _manaRequired;
 	int _meleePower, _specialType, _vaporColor, _vaporDensity, _vaporProbability;
 	int _vaporColorSurface, _vaporDensitySurface, _vaporProbabilitySurface;
@@ -440,18 +446,28 @@ public:
 	const std::vector<std::string> &getCategories() const;
 	/// Checks if the item belongs to a category.
 	bool belongsToCategory(const std::string &category) const;
+	/// Returns the first item category that has a non-empty invOrder, if it exists.
+	const RuleItemCategory* getFirstCategoryWithInvOrder(const Mod* mod) const;
 	/// Gets unit rule if the item is vehicle weapon.
 	Unit* getVehicleUnit() const;
+	/// Gets the fixed ammo slot of the primary vehicle weapon.
+	int getVehicleFixedAmmoSlot() const { return _vehicleFixedAmmoSlot; }
 	/// Gets the item's size.
 	double getSize() const;
+
 	/// Gets the item's monthly buy limit.
 	int getMonthlyBuyLimit() const { return _monthlyBuyLimit; }
-	/// Gets the item's purchase cost.
+	/// Gets the item's basic purchase cost.
 	int getBuyCost() const;
-	/// Gets the item's sale cost.
+	/// Gets the item's purchase cost.
+	int getBuyCostAdjusted(const Base* base, const SavedGame* save) const;
+	/// Gets the item's basic sale cost.
 	int getSellCost() const;
+	/// Gets the item's sale cost.
+	int getSellCostAdjusted(const Base* base, const SavedGame* save) const;
 	/// Gets the item's transfer time.
 	int getTransferTime() const;
+
 	/// Gets the item's weight.
 	int getWeight() const;
 	/// Gets the item's maximum throw range.
@@ -627,7 +643,7 @@ public:
 	/// Gets the item's throw accuracy.
 	int getAccuracyThrow() const;
 	/// Gets the item's close quarters combat accuracy.
-	int getAccuracyCloseQuarters(Mod *mod) const;
+	int getAccuracyCloseQuarters(const Mod *mod) const;
 	/// Get penalty for firing this weapon on out-of-LOS targets
 	int getNoLOSAccuracyPenalty(Mod *mod) const;
 
@@ -694,6 +710,8 @@ public:
 	bool isMeleeTypeSet() const { return _meleeTypeSet; }
 	/// Gets the item's type.
 	BattleType getBattleType() const;
+	/// Is the item's type BT_GRENADE or BT_PROXIMITYGRENADE?
+	bool isGrenadeOrProxy() const;
 	/// Gets the item's fuse type.
 	BattleFuseType getFuseTimerType() const;
 	/// Gets the item's default fuse value.
@@ -820,6 +838,8 @@ public:
 	const std::string &getUnprimeActionName() const { return _unprimeActionName; }
 	/// Get message for unprime action.
 	const std::string &getUnprimeActionMessage() const { return _unprimeActionMessage; }
+	/// Get message when trying to sell the item.
+	const std::string& getSellActionMessage() const { return _sellActionMessage; }
 	/// is this item a 2 handed weapon?
 	bool isRifle() const;
 	/// is this item a single handed weapon?
@@ -872,6 +892,8 @@ public:
 	/// Checks if this item can be used to target a given faction.
 	bool isTargetAllowed(UnitFaction targetFaction, UnitFaction attacker) const;
 	int getTargetMatrixRaw() const { return _targetMatrix; }
+	/// Should mind control convert the unit to the neutral faction?
+	bool convertToCivilian() const { return _convertToCivilian; }
 	/// Check if LOS is required to use this item (only applies to psionic type items)
 	bool isLOSRequired() const;
 	/// Is this item restricted to underwater use?
@@ -893,9 +915,9 @@ public:
 	/// Gets the index of the sprite in the CustomItemPreview sprite set
 	const std::vector<int> &getCustomItemPreviewIndex() const;
 	/// Gets the kneel bonus.
-	int getKneelBonus(Mod *mod) const;
+	int getKneelBonus(const Mod *mod) const;
 	/// Gets the one-handed penalty.
-	int getOneHandedPenalty(Mod *mod) const;
+	int getOneHandedPenalty(const Mod *mod) const;
 	/// Gets the monthly salary.
 	int getMonthlySalary() const;
 	/// Gets the monthly maintenance.

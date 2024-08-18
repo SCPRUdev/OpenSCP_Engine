@@ -33,6 +33,7 @@
 #include "../Interface/Text.h"
 #include "../Interface/TextList.h"
 #include "../Savegame/Base.h"
+#include "../Savegame/BattleUnit.h"
 #include "../Savegame/Soldier.h"
 #include "../Savegame/SavedGame.h"
 #include "SoldierInfoState.h"
@@ -238,6 +239,7 @@ SoldiersState::SoldiersState(Base *base) : _base(base), _origSoldierOrder(*_base
 	_lstSoldiers->onLeftArrowClick((ActionHandler)&SoldiersState::lstItemsLeftArrowClick);
 	_lstSoldiers->onRightArrowClick((ActionHandler)&SoldiersState::lstItemsRightArrowClick);
 	_lstSoldiers->onMouseClick((ActionHandler)&SoldiersState::lstSoldiersClick);
+	_lstSoldiers->onMouseClick((ActionHandler)&SoldiersState::lstSoldiersClick, SDL_BUTTON_RIGHT);
 	_lstSoldiers->onMousePress((ActionHandler)&SoldiersState::lstSoldiersMousePress);
 }
 
@@ -367,6 +369,7 @@ void SoldiersState::initList(size_t scrl)
 	_lstSoldiers->clearList();
 
 	_filteredListOfSoldiers.clear();
+	_filteredIndicesOfSoldiers.clear();
 
 	std::string selAction = "STR_SOLDIER_INFO";
 	if (!_availableOptions.empty())
@@ -391,8 +394,10 @@ void SoldiersState::initList(size_t scrl)
 		RuleSoldierTransformation *transformationRule = _game->getMod()->getSoldierTransformation(selAction);
 		if (transformationRule)
 		{
+			int idx = -1;
 			for (auto* soldier : *_base->getSoldiers())
 			{
+				idx++;
 				if (soldier->getCraft() && soldier->getCraft()->getStatus() == "STR_OUT")
 				{
 					// soldiers outside of the base are not eligible
@@ -401,6 +406,7 @@ void SoldiersState::initList(size_t scrl)
 				if (soldier->isEligibleForTransformation(transformationRule))
 				{
 					_filteredListOfSoldiers.push_back(soldier);
+					_filteredIndicesOfSoldiers.push_back(idx);
 				}
 			}
 			for (auto* deadMan : *_game->getSavedGame()->getDeadSoldiers())
@@ -408,6 +414,7 @@ void SoldiersState::initList(size_t scrl)
 				if (deadMan->isEligibleForTransformation(transformationRule))
 				{
 					_filteredListOfSoldiers.push_back(deadMan);
+					_filteredIndicesOfSoldiers.push_back(-1); // invalid
 				}
 			}
 		}
@@ -658,6 +665,24 @@ void SoldiersState::btnInventoryClick(Action *)
 		bgen.setBase(_base);
 		bgen.runInventory(0);
 
+		// pre-select the soldier under the mouse cursor (if possible)
+		if (_availableOptions.empty() || _cbxScreenActions->getSelected() == 0)
+		{
+			size_t idx = _lstSoldiers->getSelectedRow();
+			if (idx < _base->getSoldiers()->size())
+			{
+				int soldierId = _base->getSoldiers()->at(idx)->getId();
+				for (auto* unit : *bgame->getUnits())
+				{
+					if (unit->getId() == soldierId)
+					{
+						bgame->setSelectedUnit(unit);
+						break;
+					}
+				}
+			}
+		}
+
 		_game->getScreen()->clear();
 		_game->pushState(new InventoryState(false, 0, _base, true));
 	}
@@ -682,7 +707,26 @@ void SoldiersState::lstSoldiersClick(Action *action)
 	}
 	if (selAction == "STR_SOLDIER_INFO")
 	{
-		_game->pushState(new SoldierInfoState(_base, _lstSoldiers->getSelectedRow()));
+		if (action->getDetails()->button.button == SDL_BUTTON_RIGHT)
+		{
+			btnInventoryClick(nullptr);
+		}
+		else
+		{
+			_game->pushState(new SoldierInfoState(_base, _lstSoldiers->getSelectedRow()));
+		}
+	}
+	else if (action->getDetails()->button.button == SDL_BUTTON_RIGHT)
+	{
+		size_t idx = _lstSoldiers->getSelectedRow();
+		if (idx < _filteredIndicesOfSoldiers.size())
+		{
+			int soldierId = _filteredIndicesOfSoldiers[idx];
+			if (soldierId > -1)
+			{
+				_game->pushState(new SoldierInfoState(_base, soldierId));
+			}
+		}
 	}
 	else
 	{

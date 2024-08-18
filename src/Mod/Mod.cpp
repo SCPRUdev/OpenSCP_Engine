@@ -184,10 +184,14 @@ std::string Mod::DEBRIEF_MUSIC_GOOD;
 std::string Mod::DEBRIEF_MUSIC_BAD;
 int Mod::DIFFICULTY_COEFFICIENT[5];
 int Mod::SELL_PRICE_COEFFICIENT[5];
+int Mod::BUY_PRICE_COEFFICIENT[5];
 int Mod::DIFFICULTY_BASED_RETAL_DELAY[5];
 int Mod::UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
+int Mod::PEDIA_FACILITY_RENDER_PARAMETERS[4];
 bool Mod::EXTENDED_ITEM_RELOAD_COST;
+bool Mod::EXTENDED_INVENTORY_SLOT_SORTING;
 bool Mod::EXTENDED_RUNNING_COST;
+int Mod::EXTENDED_MOVEMENT_COST_ROUNDING;
 bool Mod::EXTENDED_HWP_LOAD_ORDER;
 int Mod::EXTENDED_MELEE_REACTIONS;
 int Mod::EXTENDED_TERRAIN_MELEE;
@@ -273,6 +277,12 @@ void Mod::resetGlobalStatics()
 	SELL_PRICE_COEFFICIENT[3] = 100;
 	SELL_PRICE_COEFFICIENT[4] = 100;
 
+	BUY_PRICE_COEFFICIENT[0] = 100;
+	BUY_PRICE_COEFFICIENT[1] = 100;
+	BUY_PRICE_COEFFICIENT[2] = 100;
+	BUY_PRICE_COEFFICIENT[3] = 100;
+	BUY_PRICE_COEFFICIENT[4] = 100;
+
 	DIFFICULTY_BASED_RETAL_DELAY[0] = 0;
 	DIFFICULTY_BASED_RETAL_DELAY[1] = 0;
 	DIFFICULTY_BASED_RETAL_DELAY[2] = 0;
@@ -284,8 +294,15 @@ void Mod::resetGlobalStatics()
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[2] = 100; // select weapon
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[3] = 20;  // annoyed
 
+	PEDIA_FACILITY_RENDER_PARAMETERS[0] = 2; // pedia facility max width
+	PEDIA_FACILITY_RENDER_PARAMETERS[1] = 2; // pedia facility max height
+	PEDIA_FACILITY_RENDER_PARAMETERS[2] = 0; // pedia facility X offset
+	PEDIA_FACILITY_RENDER_PARAMETERS[3] = 0; // pedia facility Y offset
+
 	EXTENDED_ITEM_RELOAD_COST = false;
+	EXTENDED_INVENTORY_SLOT_SORTING = false;
 	EXTENDED_RUNNING_COST = false;
+	EXTENDED_MOVEMENT_COST_ROUNDING = 0;
 	EXTENDED_HWP_LOAD_ORDER = false;
 	EXTENDED_MELEE_REACTIONS = 0;
 	EXTENDED_TERRAIN_MELEE = 0;
@@ -394,11 +411,11 @@ Mod::Mod() :
 	_maxViewDistance(20), _maxDarknessToSeeUnits(9), _maxStaticLightDistance(16), _maxDynamicLightDistance(24), _enhancedLighting(0),
 	_costHireEngineer(0), _costHireScientist(0),
 	_costEngineer(0), _costScientist(0), _timePersonnel(0), _hireByCountryOdds(0), _hireByRegionOdds(0), _initialFunding(0),
-	_aiUseDelayBlaster(3), _aiUseDelayFirearm(0), _aiUseDelayGrenade(3), _aiUseDelayMelee(0), _aiUseDelayPsionic(0),
+	_aiUseDelayBlaster(3), _aiUseDelayFirearm(0), _aiUseDelayGrenade(3), _aiUseDelayProxy(999), _aiUseDelayMelee(0), _aiUseDelayPsionic(0),
 	_aiFireChoiceIntelCoeff(5), _aiFireChoiceAggroCoeff(5), _aiExtendedFireModeChoice(false), _aiRespectMaxRange(false), _aiDestroyBaseFacilities(false),
 	_aiPickUpWeaponsMoreActively(false), _aiPickUpWeaponsMoreActivelyCiv(false),
 	_maxLookVariant(0), _tooMuchSmokeThreshold(10), _customTrainingFactor(100), _minReactionAccuracy(0), _chanceToStopRetaliation(0), _lessAliensDuringBaseDefense(false),
-	_allowCountriesToCancelAlienPact(false), _buildInfiltrationBaseCloseToTheCountry(false), _allowAlienBasesOnWrongTextures(true),
+	_allowCountriesToCancelAlienPact(false), _buildInfiltrationBaseCloseToTheCountry(false), _infiltrateRandomCountryInTheRegion(false), _allowAlienBasesOnWrongTextures(true),
 	_kneelBonusGlobal(115), _oneHandedPenaltyGlobal(80),
 	_enableCloseQuartersCombat(0), _closeQuartersAccuracyGlobal(100), _closeQuartersTuCostGlobal(12), _closeQuartersEnergyCostGlobal(8), _closeQuartersSneakUpGlobal(0),
 	_noLOSAccuracyPenaltyGlobal(-1),
@@ -1566,6 +1583,7 @@ const std::string YamlRuleNodeDelete = "delete";
 const std::string YamlRuleNodeNew = "new";
 const std::string YamlRuleNodeOverride = "override";
 const std::string YamlRuleNodeUpdate = "update";
+const std::string YamlRuleNodeIgnore = "ignore";
 
 
 void loadRuleInfoHelper(const YAML::Node &node, const char* nodeName, const char* type)
@@ -1578,6 +1596,7 @@ void loadRuleInfoHelper(const YAML::Node &node, const char* nodeName, const char
 		info.get() << " '" << YamlRuleNodeNew << ":',";
 		info.get() << " '" << YamlRuleNodeOverride << ":',";
 		info.get() << " '" << YamlRuleNodeUpdate << ":',";
+		info.get() << " '" << YamlRuleNodeIgnore << ":',";
 		info.get() << " '" << type << ":'";
 	}
 }
@@ -2408,6 +2427,7 @@ void Mod::loadMod(const std::vector<FileMap::FileRecord> &rulesetFiles, ModScrip
 		Log(LOG_VERBOSE) << "- " << filerec.fullpath;
 		try
 		{
+			_scriptGlobal->fileLoad(filerec.fullpath);
 			loadFile(filerec, parsers);
 		}
 		catch (Exception &e)
@@ -2623,8 +2643,19 @@ void Mod::loadConstants(const YAML::Node &node)
 	}
 	DEBRIEF_MUSIC_GOOD = node["goodDebriefingMusic"].as<std::string>(DEBRIEF_MUSIC_GOOD);
 	DEBRIEF_MUSIC_BAD = node["badDebriefingMusic"].as<std::string>(DEBRIEF_MUSIC_BAD);
+	if (node["extendedPediaFacilityParams"])
+	{
+		int k = 0;
+		for (YAML::const_iterator j = node["extendedPediaFacilityParams"].begin(); j != node["extendedPediaFacilityParams"].end() && k < 4; ++j)
+		{
+			PEDIA_FACILITY_RENDER_PARAMETERS[k] = (*j).as<int>(PEDIA_FACILITY_RENDER_PARAMETERS[k]);
+			++k;
+		}
+	}
 	EXTENDED_ITEM_RELOAD_COST = node["extendedItemReloadCost"].as<bool>(EXTENDED_ITEM_RELOAD_COST);
+	EXTENDED_INVENTORY_SLOT_SORTING = node["extendedInventorySlotSorting"].as<bool>(EXTENDED_INVENTORY_SLOT_SORTING);
 	EXTENDED_RUNNING_COST = node["extendedRunningCost"].as<bool>(EXTENDED_RUNNING_COST);
+	EXTENDED_MOVEMENT_COST_ROUNDING = node["extendedMovementCostRounding"].as<int>(EXTENDED_MOVEMENT_COST_ROUNDING);
 	EXTENDED_HWP_LOAD_ORDER = node["extendedHwpLoadOrder"].as<bool>(EXTENDED_HWP_LOAD_ORDER);
 	EXTENDED_MELEE_REACTIONS = node["extendedMeleeReactions"].as<int>(EXTENDED_MELEE_REACTIONS);
 	EXTENDED_TERRAIN_MELEE = node["extendedTerrainMelee"].as<int>(EXTENDED_TERRAIN_MELEE);
@@ -3092,6 +3123,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		_aiUseDelayBlaster = nodeAI["useDelayBlaster"].as<int>(_aiUseDelayBlaster);
 		_aiUseDelayFirearm = nodeAI["useDelayFirearm"].as<int>(_aiUseDelayFirearm);
 		_aiUseDelayGrenade = nodeAI["useDelayGrenade"].as<int>(_aiUseDelayGrenade);
+		_aiUseDelayProxy = nodeAI["aiUseDelayProxy"].as<int>(_aiUseDelayProxy);
 		_aiUseDelayMelee   = nodeAI["useDelayMelee"].as<int>(_aiUseDelayMelee);
 		_aiUseDelayPsionic = nodeAI["useDelayPsionic"].as<int>(_aiUseDelayPsionic);
 
@@ -3111,6 +3143,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_lessAliensDuringBaseDefense = doc["lessAliensDuringBaseDefense"].as<bool>(_lessAliensDuringBaseDefense);
 	_allowCountriesToCancelAlienPact = doc["allowCountriesToCancelAlienPact"].as<bool>(_allowCountriesToCancelAlienPact);
 	_buildInfiltrationBaseCloseToTheCountry = doc["buildInfiltrationBaseCloseToTheCountry"].as<bool>(_buildInfiltrationBaseCloseToTheCountry);
+	_infiltrateRandomCountryInTheRegion = doc["infiltrateRandomCountryInTheRegion"].as<bool>(_infiltrateRandomCountryInTheRegion);
 	_allowAlienBasesOnWrongTextures = doc["allowAlienBasesOnWrongTextures"].as<bool>(_allowAlienBasesOnWrongTextures);
 	_kneelBonusGlobal = doc["kneelBonusGlobal"].as<int>(_kneelBonusGlobal);
 	_oneHandedPenaltyGlobal = doc["oneHandedPenaltyGlobal"].as<int>(_oneHandedPenaltyGlobal);
@@ -3267,6 +3300,15 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		for (YAML::const_iterator i = doc["sellPriceCoefficient"].begin(); i != doc["sellPriceCoefficient"].end() && num < MaxDifficultyLevels; ++i)
 		{
 			SELL_PRICE_COEFFICIENT[num] = (*i).as<int>(SELL_PRICE_COEFFICIENT[num]);
+			++num;
+		}
+	}
+	if (doc["buyPriceCoefficient"])
+	{
+		size_t num = 0;
+		for (YAML::const_iterator i = doc["buyPriceCoefficient"].begin(); i != doc["buyPriceCoefficient"].end() && num < MaxDifficultyLevels; ++i)
+		{
+			BUY_PRICE_COEFFICIENT[num] = (*i).as<int>(BUY_PRICE_COEFFICIENT[num]);
 			++num;
 		}
 	}
@@ -3564,11 +3606,12 @@ T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::ve
 	const auto newNode = getNode(node, YamlRuleNodeNew);
 	const auto overrideNode = getNode(node, YamlRuleNodeOverride);
 	const auto updateNode = getNode(node, YamlRuleNodeUpdate);
+	const auto ignoreNode = getNode(node, YamlRuleNodeIgnore);
 
 	{
 		// check for duplicates
 		const std::tuple<std::string, YAML::Node, bool>* last = nullptr;
-		for (auto* p : { &defaultNode, &deleteNode, &newNode, &updateNode, &overrideNode })
+		for (auto* p : { &defaultNode, &deleteNode, &newNode, &updateNode, &overrideNode, &ignoreNode })
 		{
 			if (haveNode(*p))
 			{
@@ -3690,9 +3733,13 @@ T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::ve
 			Log(LOG_INFO) << "Rule named '" << type  << "' do not exist for " << getDescriptionNode(updateNode);
 		}
 	}
+	else if (haveNode(ignoreNode))
+	{
+		// nothing to see there...
+	}
 	else
 	{
-		//no correct id throw exception?
+		checkForObsoleteErrorByYear("Mod", node, "Missing main node", 2025);
 	}
 
 	return rule;
@@ -3842,12 +3889,13 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 				Craft *found = 0;
 				for (auto* craft : *base->getCrafts())
 				{
-					if (!found && craft->getRules()->getAllowLanding() && craft->getSpaceAvailable() > 0)
+					CraftPlacementErrors err = craft->validateAddingSoldier(craft->getSpaceAvailable(), soldier);
+					if (!found && craft->getRules()->getAllowLanding() && err == CPE_None)
 					{
 						// Remember transporter as fall-back, but search further for interceptors
 						found = craft;
 					}
-					if (!craft->getRules()->getAllowLanding() && craft->getSpaceUsed() < craft->getRules()->getPilots())
+					if (!craft->getRules()->getAllowLanding() && err == CPE_None && craft->getSpaceUsed() < craft->getRules()->getPilots())
 					{
 						// Fill interceptors with minimum amount of pilots necessary
 						found = craft;
@@ -3860,7 +3908,8 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 				Craft *found = 0;
 				for (auto* craft : *base->getCrafts())
 				{
-					if (craft->getRules()->getAllowLanding() && craft->getSpaceAvailable() > 0)
+					CraftPlacementErrors err = craft->validateAddingSoldier(craft->getSpaceAvailable(), soldier);
+					if (craft->getRules()->getAllowLanding() && err == CPE_None)
 					{
 						// First available transporter will do
 						found = craft;

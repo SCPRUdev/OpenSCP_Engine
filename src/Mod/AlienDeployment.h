@@ -99,6 +99,7 @@ private:
 	std::string _missionBountyItem;
 	int _missionBountyItemCount;
 	int _bughuntMinTurn;
+	bool _forcePercentageOutsideUfo;
 	std::vector<DeploymentData> _data;
 	std::vector<ReinforcementsData> _reinforcements;
 	int _width, _length, _height, _civilians;
@@ -176,6 +177,8 @@ public:
 	int getMissionBountyItemCount() const { return _missionBountyItemCount; }
 	/// Gets the bug hunt mode minimum turn requirement (default = 0 = not used).
 	int getBughuntMinTurn() const;
+	/// Should `percentageOutsideUfo` be forced for all kinds of missions? (instead of just UFO crash/landing sites)
+	bool getForcePercentageOutsideUfo() const { return _forcePercentageOutsideUfo; }
 	/// Gets a pointer to the data.
 	const std::vector<DeploymentData>* getDeploymentData() const;
 	/// Gets the highest used alien rank.
@@ -206,6 +209,7 @@ public:
 	std::string getRace() const;
 	/// Gets the script to use for this deployment.
 	const std::string& getRandomMapScript() const;
+	int hasTextureBasedScript(const Mod* mod) const;
 	/// Checks if this is the destination for the final mission (mars stage 1, t'leth stage 1).
 	bool isFinalDestination() const;
 	/// Gets the cutscene to play when this mission is won.

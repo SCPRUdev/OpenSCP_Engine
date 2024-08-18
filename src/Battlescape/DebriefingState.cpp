@@ -433,10 +433,11 @@ void DebriefingState::init()
 		ItemContainer *origBaseItems = _game->getSavedGame()->getSavedBattle()->getBaseStorageItems();
 		for (auto& itemType : _game->getMod()->getItemsList())
 		{
-			int qty = _base->getStorageItems()->getItem(itemType);
-			if (qty > 0 && (Options::canSellLiveAliens || !_game->getMod()->getItem(itemType)->isAlien()))
+			RuleItem *rule = _game->getMod()->getItem(itemType);
+
+			int qty = _base->getStorageItems()->getItem(rule);
+			if (qty > 0 && (Options::canSellLiveAliens || !rule->isAlien()))
 			{
-				RuleItem *rule = _game->getMod()->getItem(itemType);
 
 				// IGNORE vehicles and their ammo
 				// Note: because their number in base has been messed up by Base::setupDefenses() already in geoscape :(
@@ -450,7 +451,7 @@ void DebriefingState::init()
 					continue;
 				}
 
-				qty -= origBaseItems->getItem(itemType);
+				qty -= origBaseItems->getItem(rule);
 				if (qty > 0)
 				{
 					_recoveredItems[rule] = qty;
@@ -1587,19 +1588,22 @@ void DebriefingState::prepareDebriefing()
 						{
 							if (weapon)
 							{
-								const RuleItem *primaryRule = weapon->getRules();
-								const BattleItem *ammoItem = weapon->getAmmoForSlot(0);
-								const RuleItem *compatible = primaryRule->getVehicleClipAmmo();
-								if (primaryRule->getVehicleUnit() && compatible && ammoItem != 0 && ammoItem->getAmmoQuantity() > 0)
+								const RuleItem* primaryWeaponRule = weapon->getRules();
+								const RuleItem* fixedAmmoRule = primaryWeaponRule->getVehicleClipAmmo();
+								if (primaryWeaponRule->getVehicleUnit() && fixedAmmoRule)
 								{
-									int total = ammoItem->getAmmoQuantity();
-
-									if (primaryRule->getClipSize()) // meaning this tank can store multiple clips
+									const BattleItem* fixedAmmoItem = weapon->getAmmoForSlot(primaryWeaponRule->getVehicleFixedAmmoSlot());
+									if (fixedAmmoItem != 0 && fixedAmmoItem->getAmmoQuantity() > 0)
 									{
-										total /= ammoItem->getRules()->getClipSize();
-									}
+										int total = fixedAmmoItem->getAmmoQuantity();
 
-									addItemsToBaseStores(compatible, base, total, false);
+										if (primaryWeaponRule->getClipSize()) // meaning this tank can store multiple clips
+										{
+											total /= fixedAmmoItem->getRules()->getClipSize();
+										}
+
+										addItemsToBaseStores(fixedAmmoRule, base, total, false);
+									}
 								}
 							}
 						};
@@ -2185,7 +2189,7 @@ void DebriefingState::prepareDebriefing()
  */
 void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCanBeDestroyed)
 {
-	std::map<std::string, int> craftItemsCopy = *craft->getItems()->getContents();
+	auto craftItemsCopy = *craft->getItems()->getContents();
 	for (const auto& pair : craftItemsCopy)
 	{
 		int qty = base->getStorageItems()->getItem(pair.first);
@@ -2198,7 +2202,7 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
 			int missing = pair.second - qty;
 			base->getStorageItems()->removeItem(pair.first, qty);
 			craft->getItems()->removeItem(pair.first, missing);
-			ReequipStat stat = {pair.first, missing, craft->getName(_game->getLanguage()), 0};
+			ReequipStat stat = {pair.first->getType(), missing, craft->getName(_game->getLanguage()), 0};
 			_missingItems.push_back(stat);
 		}
 	}
@@ -2225,13 +2229,13 @@ void DebriefingState::reequipCraft(Base *base, Craft *craft, bool vehicleItemsCa
 	for (const auto& pair : *craftVehicles.getContents())
 	{
 		int qty = base->getStorageItems()->getItem(pair.first);
-		RuleItem *tankRule = _game->getMod()->getItem(pair.first, true);
+		const RuleItem *tankRule = pair.first;
 		int size = tankRule->getVehicleUnit()->getArmor()->getTotalSize();
 		int canBeAdded = std::min(qty, pair.second);
 		if (qty < pair.second)
 		{ // missing tanks
 			int missing = pair.second - qty;
-			ReequipStat stat = {pair.first, missing, craft->getName(_game->getLanguage()), 0};
+			ReequipStat stat = {pair.first->getType(), missing, craft->getName(_game->getLanguage()), 0};
 			_missingItems.push_back(stat);
 		}
 		if (tankRule->getVehicleClipAmmo() == nullptr)
@@ -2279,7 +2283,7 @@ void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base,
 {
 	if (!considerTransformations)
 	{
-		base->getStorageItems()->addItem(ruleItem->getType(), quantity);
+		base->getStorageItems()->addItem(ruleItem, quantity);
 	}
 	else
 	{
@@ -2306,7 +2310,7 @@ void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base,
 							runningTotal += it;
 							if (runningTotal >= roll)
 							{
-								base->getStorageItems()->addItem(pair.first->getType(), position);
+								base->getStorageItems()->addItem(pair.first, position);
 								break;
 							}
 							++position;
@@ -2316,13 +2320,13 @@ void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base,
 				else
 				{
 					// no RNG
-					base->getStorageItems()->addItem(pair.first->getType(), quantity * pair.second.front());
+					base->getStorageItems()->addItem(pair.first, quantity * pair.second.front());
 				}
 			}
 		}
 		else
 		{
-			base->getStorageItems()->addItem(ruleItem->getType(), quantity);
+			base->getStorageItems()->addItem(ruleItem, quantity);
 		}
 	}
 }
@@ -2336,23 +2340,14 @@ void DebriefingState::addItemsToBaseStores(const RuleItem *ruleItem, Base *base,
  */
 void DebriefingState::addItemsToBaseStores(const std::string &itemType, Base *base, int quantity, bool considerTransformations)
 {
-	if (!considerTransformations)
+	const RuleItem *ruleItem = _game->getMod()->getItem(itemType, false);
+	if (ruleItem == nullptr)
 	{
-		base->getStorageItems()->addItem(itemType, quantity);
+		Log(LOG_ERROR) << "Failed to add unknown item " << itemType;
+		return;
 	}
-	else
-	{
-		const RuleItem *ruleItem = _game->getMod()->getItem(itemType, false);
-		if (ruleItem)
-		{
-			addItemsToBaseStores(ruleItem, base, quantity, considerTransformations);
-		}
-		else
-		{
-			// unknown item?
-			base->getStorageItems()->addItem(itemType, quantity);
-		}
-	}
+
+	addItemsToBaseStores(ruleItem, base, quantity, considerTransformations);
 }
 
 /**
@@ -2453,8 +2448,13 @@ void DebriefingState::recoverItems(std::vector<BattleItem*> *from, Base *base, C
 				bi->getUnit()->getGeoscapeSoldier()->setCorpseRecovered(true);
 			}
 
+			// ammo in weapon are handled by weapon itself.
+			if (bi->isAmmo())
+			{
+				// noting
+			}
 			// put items back in the base
-			if (checkForRecovery(bi, rule))
+			else if (checkForRecovery(bi, rule))
 			{
 				bool recoverWeapon = true;
 				switch (rule->getBattleType())
@@ -2504,16 +2504,37 @@ void DebriefingState::recoverItems(std::vector<BattleItem*> *from, Base *base, C
 					}
 				}
 			}
-			// special case of fixed weapons on a soldier's armor, but not HWPs
+			// special case of fixed weapons on a soldier's armor (and HWPs, but only non-fixed ammo)
 			// makes sure we recover the ammunition from this weapon
-			else if (rule->isFixed() && bi->getOwner() && bi->getOwner()->getOriginalFaction() == FACTION_PLAYER && bi->getOwner()->getGeoscapeSoldier())
+			else if (rule->isFixed() && bi->getOwner() && bi->getOwner()->getOriginalFaction() == FACTION_PLAYER)
 			{
 				switch (rule->getBattleType())
 				{
 					case BT_FIREARM:
 					case BT_MELEE:
-						// It's a weapon, count any rounds left in the clip.
-						recoveryAmmoInWeapon(bi);
+						if (bi->getOwner()->getGeoscapeSoldier())
+						{
+							// It's a weapon, count any rounds left in the clip.
+							recoveryAmmoInWeapon(bi);
+						}
+						else
+						{
+							BattleItem* hwpFixedAmmoItem = nullptr;
+							if (rule->getVehicleUnit() && rule->getVehicleClipAmmo())
+							{
+								// remove fixed ammo (it will be recovered later elsewhere)
+								hwpFixedAmmoItem = bi->setAmmoForSlot(rule->getVehicleFixedAmmoSlot(), nullptr);
+							}
+
+							// recover the rest (i.e. non-fixed ammo)
+							recoveryAmmoInWeapon(bi);
+
+							if (hwpFixedAmmoItem)
+							{
+								// put fixed ammo back in
+								bi->setAmmoForSlot(rule->getVehicleFixedAmmoSlot(), hwpFixedAmmoItem);
+							}
+						}
 						break;
 					default:
 						break;

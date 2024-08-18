@@ -250,7 +250,12 @@ void AlienMission::think(Game &engine, const Globe &globe)
 	}
 	if (_rule.getObjective() == OBJECTIVE_INFILTRATION && _nextWave == _rule.getWaveCount())
 	{
-		for (auto* c : *game.getCountries())
+		std::vector<Country*> countriesCopy = *game.getCountries();
+		if (mod.getInfiltrateRandomCountryInTheRegion())
+		{
+			RNG::shuffle(countriesCopy);
+		}
+		for (auto* c : countriesCopy)
 		{
 			RuleRegion *region = mod.getRegion(_region, true);
 			if (c->canBeInfiltrated() && region->insideRegion(c->getRules()->getLabelLongitude(), c->getRules()->getLabelLatitude()))
@@ -436,7 +441,7 @@ Base* AlienMission::selectXcomBase(SavedGame& game, const RuleRegion& regionRule
 				if (xb->getRetaliationTarget())
 				{
 					validxcombases.push_back(xb);
-					if (_rule.skipScoutingPhase() || _rule.isMultiUfoRetaliation())
+					if (_rule.isMultiUfoRetaliation())
 					{
 						continue; // non-vanilla: let's consider all, for fun
 					}
@@ -519,21 +524,25 @@ Ufo *AlienMission::spawnUfo(SavedGame &game, const Mod &mod, const Globe &globe,
 	if (_rule.getObjective() == OBJECTIVE_RETALIATION || _rule.getObjective() == OBJECTIVE_INSTANT_RETALIATION)
 	{
 		const RuleRegion &regionRules = *mod.getRegion(_region, true);
+		Base* xcombase = nullptr;
 
 		// skip the scouting phase of a retaliation mission
-		if (_rule.isMultiUfoRetaliationExtra() && _rule.skipScoutingPhase() && _rule.getObjective() == OBJECTIVE_RETALIATION)
+		if (_rule.skipScoutingPhase() && _rule.getObjective() == OBJECTIVE_RETALIATION)
 		{
 			for (auto* xbase : *game.getBases())
 			{
 				if (regionRules.insideRegion(xbase->getLongitude(), xbase->getLatitude()))
 				{
-					xbase->setRetaliationTarget(true);
-					// break; // mark all xcom bases in the region
+					xcombase = xbase;
+					break;
 				}
 			}
 		}
+		else
+		{
+			xcombase = selectXcomBase(game, regionRules);
+		}
 
-		Base* xcombase = selectXcomBase(game, regionRules);
 		if (xcombase)
 		{
 			// Spawn a battleship straight for the XCOM base.
@@ -739,20 +748,6 @@ void AlienMission::start(Game &engine, const Globe &globe, size_t initialCount)
 		_spawnCountdown = initialCount;
 	}
 
-	// skip the scouting phase of a retaliation mission
-	if (_rule.skipScoutingPhase() && _rule.getObjective() == OBJECTIVE_RETALIATION)
-	{
-		for (auto* xbase : *engine.getSavedGame()->getBases())
-		{
-			RuleRegion* region = engine.getMod()->getRegion(_region, false);
-			if (region && region->insideRegion(xbase->getLongitude(), xbase->getLatitude()))
-			{
-				xbase->setRetaliationTarget(true);
-				// break; // mark all xcom bases in the region
-			}
-		}
-	}
-
 	// Earth-based alien operations
 	if (_rule.getOperationType() != AMOT_SPACE && !_base)
 	{
@@ -888,12 +883,16 @@ void AlienMission::ufoReachedWaypoint(Ufo &ufo, Game &engine, const Globe &globe
 	ufo.setAltitude(trajectory.getAltitude(nextWaypoint));
 	ufo.setTrajectoryPoint(nextWaypoint);
 	const RuleRegion &regionRules = *mod.getRegion(_region, true);
-	std::pair<double, double> pos = getWaypoint(wave, trajectory, nextWaypoint, globe, regionRules, ufo);
 
-	Waypoint *wp = new Waypoint();
-	wp->setLongitude(pos.first);
-	wp->setLatitude(pos.second);
-	ufo.setDestination(wp);
+	{
+		std::pair<double, double> pos = getWaypoint(wave, trajectory, nextWaypoint, globe, regionRules, ufo);
+
+		Waypoint *wp = new Waypoint();
+		wp->setLongitude(pos.first);
+		wp->setLatitude(pos.second);
+		ufo.setDestination(wp);
+	}
+
 	if (ufo.getAltitude() != "STR_GROUND")
 	{
 		if (ufo.getLandId() != 0)
