@@ -234,9 +234,11 @@ void BasescapeState::init()
 		{
 			_btnNewBase->setVisible(false);
 			_txtFunds->setVisible(false);
+			_btnPurchase->setVisible(false);
+			_btnSell->setVisible(false);
 		}
 	}
-
+	/*
 	if (!_game->getMod()->getPurchaseUnlockResearch().empty())
 	{
 		bool purchaseUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getPurchaseUnlockResearch(), true);
@@ -254,7 +256,7 @@ void BasescapeState::init()
 			_btnSell->setVisible(false);
 		}
 	}
-
+*/
 }
 
 /**

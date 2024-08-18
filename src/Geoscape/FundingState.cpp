@@ -138,6 +138,9 @@ FundingState::FundingState()
 			_txtFunding->setVisible(false);
 			_txtChange->setVisible(false);
 			_lstCountries->setVisible(false);
+			_sortName->setVisible(false);
+			_sortFunding->setVisible(false);
+			_sortChange->setVisible(false);
 		}
 	}
 
