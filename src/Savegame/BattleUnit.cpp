@@ -6221,6 +6221,10 @@ void getListSizeHackScript(BattleUnit* bu, int& i)
 	}
 }
 
+bool filterItemScript(BattleUnit* unit, BattleItem* item)
+{
+	return item;
+}
 
 std::string debugDisplayScript(const BattleUnit* bu)
 {
@@ -6418,8 +6422,10 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.add<&getInventoryItemScript2>("getInventoryItem");
 	bu.add<&getListSizeScript<&BattleUnit::_inventory>>("getInventoryItem.size");
 	bu.add<&getListScript<&BattleUnit::_inventory>>("getInventoryItem");
+	bu.addList<&filterItemScript, &BattleUnit::_inventory>("getInventoryItem");
 	bu.add<&getListSizeHackScript<&BattleUnit::_specWeapon>>("getSpecialItem.size");
 	bu.add<&getListScript<&BattleUnit::_specWeapon>>("getSpecialItem");
+	bu.addList<&filterItemScript, &BattleUnit::_specWeapon>("getSpecialItem");
 
 	bu.add<&getPositionXScript>("getPosition.getX");
 	bu.add<&getPositionYScript>("getPosition.getY");
@@ -6558,10 +6564,12 @@ void commonBattleUnitAnimations(ScriptParserBase* parser)
 	bu.add<&BattleUnit::getFloorAbove>("isFloorAbove", "check if floor is shown above unit");
 	bu.add<&BattleUnit::getBreathExhaleFrame>("getBreathExhaleFrame", "return animation frame of breath bubbles, -1 means no animation");
 	bu.add<&BattleUnit::getBreathInhaleFrame>("getBreathInhaleFrame", "return number of frames to next breath animation start, 0 means animation started, -1 no animation");
+
+	SavedBattleGame::ScriptRegisterUnitAnimations(parser);
 }
 
 
-}
+} // namespace
 
 /**
  * Constructor of recolor script parser.

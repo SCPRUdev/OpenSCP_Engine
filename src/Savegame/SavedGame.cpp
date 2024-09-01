@@ -557,6 +557,23 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
 			MissionSite *m = new MissionSite(mod->getAlienMission(type), mod->getDeployment(deployment), mod->getDeployment(alienWeaponDeploy));
 			m->load(*i);
 			_missionSites.push_back(m);
+			// link with UFO
+			if (m->getUfoUniqueId() > 0)
+			{
+				Ufo* ufo = nullptr;
+				for (auto* u : _ufos)
+				{
+					if (u->getUniqueId() == m->getUfoUniqueId())
+					{
+						ufo = u;
+						break;
+					}
+				}
+				if (ufo)
+				{
+					m->setUfo(ufo);
+				}
+			}
 		}
 		else
 		{
@@ -675,6 +692,35 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
 		}
 	}
 
+	loadTemplates(doc, mod);
+
+	for (YAML::const_iterator i = doc["missionStatistics"].begin(); i != doc["missionStatistics"].end(); ++i)
+	{
+		MissionStatistics *ms = new MissionStatistics();
+		ms->load(*i);
+		_missionStatistics.push_back(ms);
+	}
+
+	for (YAML::const_iterator it = doc["autoSales"].begin(); it != doc["autoSales"].end(); ++it)
+	{
+		std::string itype = it->as<std::string>();
+		if (mod->getItem(itype))
+		{
+			_autosales.insert(mod->getItem(itype));
+		}
+	}
+
+	if (const YAML::Node &battle = doc["battleGame"])
+	{
+		_battleGame = new SavedBattleGame(mod, lang);
+		_battleGame->load(battle, mod, this);
+	}
+
+	_scriptValues.load(doc, mod->getScriptGlobal());
+}
+
+void SavedGame::loadTemplates(const YAML::Node& doc, const Mod* mod)
+{
 	for (int j = 0; j < Options::oxceMaxEquipmentLayoutTemplates; ++j)
 	{
 		std::ostringstream oss;
@@ -727,30 +773,6 @@ void SavedGame::load(const std::string &filename, Mod *mod, Language *lang)
 			_globalCraftLoadoutName[j] = doc[key2].as<std::string>();
 		}
 	}
-
-	for (YAML::const_iterator i = doc["missionStatistics"].begin(); i != doc["missionStatistics"].end(); ++i)
-	{
-		MissionStatistics *ms = new MissionStatistics();
-		ms->load(*i);
-		_missionStatistics.push_back(ms);
-	}
-
-	for (YAML::const_iterator it = doc["autoSales"].begin(); it != doc["autoSales"].end(); ++it)
-	{
-		std::string itype = it->as<std::string>();
-		if (mod->getItem(itype))
-		{
-			_autosales.insert(mod->getItem(itype));
-		}
-	}
-
-	if (const YAML::Node &battle = doc["battleGame"])
-	{
-		_battleGame = new SavedBattleGame(mod, lang);
-		_battleGame->load(battle, mod, this);
-	}
-
-	_scriptValues.load(doc, mod->getScriptGlobal());
 }
 
 /**
@@ -1584,15 +1606,6 @@ void SavedGame::addFinishedResearchSimple(const RuleResearch * research)
  */
 void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * mod, Base * base, bool score)
 {
-	// process "re-enables"
-	for (const auto* ree : research->getReenabled())
-	{
-		if (isResearchRuleStatusDisabled(ree->getName()))
-		{
-			setResearchRuleStatus(ree->getName(), RuleResearch::RESEARCH_STATUS_NEW); // reset status
-		}
-	}
-
 	if (isResearchRuleStatusDisabled(research->getName()))
 	{
 		return;
@@ -1643,6 +1656,15 @@ void SavedGame::addFinishedResearch(const RuleResearch * research, const Mod * m
 			if (!hasUndiscoveredProtectedUnlocks)
 			{
 				checkRelatedZeroCostTopics = false;
+			}
+		}
+
+		// process "re-enables": https://openxcom.org/forum/index.php?topic=12071.0
+		for (const auto* ree : currentQueueItem->getReenabled())
+		{
+			if (isResearchRuleStatusDisabled(ree->getName()))
+			{
+				setResearchRuleStatus(ree->getName(), RuleResearch::RESEARCH_STATUS_NEW); // reset status
 			}
 		}
 
