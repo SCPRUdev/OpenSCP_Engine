@@ -3602,17 +3602,6 @@ void GeoscapeState::determineAlienMissions()
 				}
 				if (triggerHappy)
 				{
-					// base functions requirements
-					for (auto& triggerBaseFunc : arcScript->getBaseFunctionTriggers())
-					{
-						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
-																	_game->getMod()) == triggerBaseFunc.second);
-						if (!triggerHappy)
-							break;
-					}
-				}
-				if (triggerHappy)
-				{
 					// xcom base requirements
 					for (auto& triggerXcomBase : arcScript->getXcomBaseInRegionTriggers())
 					{
@@ -3785,16 +3774,6 @@ void GeoscapeState::determineAlienMissions()
 						break;
 				}
 			}
-			{
-				// base functions requirements
-				for (auto& triggerBaseFunc : command->getBaseFunctionTriggers())
-				{
-					triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
-																_game->getMod()) == triggerBaseFunc.second);
-					if (!triggerHappy)
-						break;
-				}
-			}
 			if (triggerHappy)
 			{
 				// xcom base requirements
@@ -3957,16 +3936,6 @@ void GeoscapeState::determineAlienMissions()
 					for (auto& triggerFacility : eventScript->getFacilityTriggers())
 					{
 						triggerHappy = (save->isFacilityBuilt(triggerFacility.first) == triggerFacility.second);
-						if (!triggerHappy)
-							break;
-					}
-				}
-				{
-					// base functions requirements
-					for (auto& triggerBaseFunc : eventScript->getBaseFunctionTriggers())
-					{
-						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
-																	_game->getMod()) == triggerBaseFunc.second);
 						if (!triggerHappy)
 							break;
 					}
