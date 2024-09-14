@@ -274,6 +274,7 @@ const std::map<std::string, bool>& RuleMissionScript::getBaseFunctionTriggers() 
 {
 	return _baseFunctionTriggers;
 }
+
 /**
  * @return a list of xcom base triggers that govern execution of this script.
  */

@@ -91,7 +91,7 @@ public:
 	/// Gets the facility triggers that may apply to this command.
 	const std::map<std::string, bool> &getFacilityTriggers() const { return _facilityTriggers; }
 	/// Gets the base function triggers that may apply to this command.
-	const std::map<std::string, bool>& getBaseFunctionTriggers() const { return _baseFunctionTriggers; }
+	const std::map<std::string, bool> &getBaseFunctionTriggers() const { return _baseFunctionTriggers; }
 	/// Gets the xcom base triggers that may apply to this command.
 	const std::map<std::string, bool> &getXcomBaseInRegionTriggers() const { return _xcomBaseInRegionTriggers; }
 	/// Gets the xcom base triggers that may apply to this command.
