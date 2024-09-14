@@ -274,13 +274,6 @@ const std::map<std::string, bool>& RuleMissionScript::getBaseFunctionTriggers() 
 {
 	return _baseFunctionTriggers;
 }
-/**
- * @return a list of base function triggers that govern execution of this script.
- */
-const std::map<std::string, bool> &RuleMissionScript::getBaseFunctionTriggers() const
-{
-	return _baseFunctionTriggers;
-}
 
 /**
  * @return a list of xcom base triggers that govern execution of this script.
