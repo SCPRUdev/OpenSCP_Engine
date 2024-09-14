@@ -2291,6 +2291,7 @@ bool SavedGame::isFacilityBuilt(const std::string &facilityType) const
 
 /**
  * Returns if a certain base function has been enabled in any base.
+
  * @param base function ID (as it was initialized in facilities).
  * @return Whether it's been enabled or not. If false, the function wasn't enabled in any base.
  */
@@ -2299,6 +2300,7 @@ bool SavedGame::isBaseFunctionEnabled(const std::string &baseFunctionType, const
 	// Always return false, if such base function was never created.
 	RuleBaseFacilityFunctions requiredFunc = mod->getBaseFunctionsRule(baseFunctionType);
 	if (requiredFunc.none()) return false;
+
 
 	// Proceed with proper checks, if base function is valid.
 	for (auto* xbase : _bases)
@@ -2310,7 +2312,6 @@ bool SavedGame::isBaseFunctionEnabled(const std::string &baseFunctionType, const
 	}
 	return false;
 }
-
 /**
  * Returns if a certain soldier type has been hired in any base.
  * @param soldierType soldier type ID.

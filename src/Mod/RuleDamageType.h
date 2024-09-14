@@ -36,6 +36,8 @@ enum ItemDamageRandomType
 	DRT_EASY = 7,
 	DRT_STANDARD = 8,
 	DRT_EXPLOSION = 9,
+	DRT_SCP = 10,
+	DRT_SCP_LIGHT = 11,
 };
 
 /**
@@ -74,6 +76,8 @@ struct RuleDamageType
 	/// Threshold of smoke creation
 	int SmokeThreshold;
 
+	/// Conversion from power to unit health damage before applying armor protection.
+	float ToHealthPre;
 	/// Conversion from power to unit damage.
 	float ToHealth;
 	/// Conversion from power to mana loss.
@@ -88,15 +92,25 @@ struct RuleDamageType
 	float ToItem;
 	/// Conversion from power to tile damage.
 	float ToTile;
+	/// Conversion from power to stun level before applying armor protection.
+	float ToStunPre;
 	/// Conversion from power to stun level.
 	float ToStun;
+	/// Conversion from power to energy lose before applying armor protection.
+	float ToEnergyPre;
 	/// Conversion from power to energy lose.
 	float ToEnergy;
+	/// Conversion from power to time units lose before applying armor protection.
+	float ToTimePre;
 	/// Conversion from power to time units lose.
 	float ToTime;
+	/// Conversion from power to morale lose before applying armor protection.
+	float ToMoralePre;
 	/// Conversion from power to morale lose.
 	float ToMorale;
 
+	/// Damage type use random conversion to health pre damage.
+	bool RandomHealthPre;
 	/// Damage type use random conversion to health damage.
 	bool RandomHealth;
 	/// Damage type use random conversion mana loss.
@@ -111,12 +125,20 @@ struct RuleDamageType
 	bool RandomItem;
 	/// Damage type use random conversion tile damage.
 	bool RandomTile;
+	/// Damage type use random conversion stun pre level.
+	bool RandomStunPre;
 	/// Damage type use random conversion stun level.
 	bool RandomStun;
+	/// Damage type use random conversion energy pre lose.
+	bool RandomEnergyPre;
 	/// Damage type use random conversion energy lose.
 	bool RandomEnergy;
+	/// Damage type use random conversion time pre units lose.
+	bool RandomTimePre;
 	/// Damage type use random conversion time units lose.
 	bool RandomTime;
+	/// Damage type use random conversion morale pre lose.
+	bool RandomMoralePre;
 	/// Damage type use random conversion morale lose.
 	bool RandomMorale;
 
@@ -144,6 +166,8 @@ struct RuleDamageType
 	/// Loads item data from YAML.
 	void load(const YAML::Node& node);
 
+	/// Get final damage value to health based on damage before armor reduction.
+	int getHealthPreFinalDamage(int damage) const;
 	/// Get final damage value to health based on damage.
 	int getHealthFinalDamage(int damage) const;
 	/// Get final damage value to mana based on damage.
@@ -158,12 +182,20 @@ struct RuleDamageType
 	int getItemFinalDamage(int damage) const;
 	/// Get final damage value to tile based on damage.
 	int getTileFinalDamage(int damage) const;
+	/// Get stun pre level change based on damage before armor reduction.
+	int getStunPreFinalDamage(int damage) const;
 	/// Get stun level change based on damage.
 	int getStunFinalDamage(int damage) const;
+	/// Get energy change based on damage before armor reduction.
+	int getEnergyPreFinalDamage(int damage) const;
 	/// Get energy change based on damage.
 	int getEnergyFinalDamage(int damage) const;
+	/// Get time pre units change based on damage before armor reduction.
+	int getTimePreFinalDamage(int damage) const;
 	/// Get time units change based on damage.
 	int getTimeFinalDamage(int damage) const;
+	/// Get morale change based on damage before armor reduction.
+	int getMoralePreFinalDamage(int damage) const;
 	/// Get morale change based on damage.
 	int getMoraleFinalDamage(int damage) const;
 };
