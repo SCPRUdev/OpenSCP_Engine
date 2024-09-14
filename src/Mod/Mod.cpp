@@ -108,6 +108,7 @@
 #include "RuleConverter.h"
 #include "RuleSoldierTransformation.h"
 #include "RuleSoldierBonus.h"
+#include "RuleStartingBaseSet.h"
 
 #define ARRAYLEN(x) (std::size(x))
 
@@ -188,6 +189,17 @@ int Mod::BUY_PRICE_COEFFICIENT[5];
 int Mod::DIFFICULTY_BASED_RETAL_DELAY[5];
 int Mod::UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
 int Mod::PEDIA_FACILITY_RENDER_PARAMETERS[4];
+int Mod::ACCELERATION_PENALTY[4];
+std::pair<int, int> Mod::ACCELERATION_COEFF[4];
+bool Mod::CRAFT_LIST_SHOW_CLASS;
+bool Mod::CRAFT_LIST_CLASS_SHORT;
+bool Mod::BASE_SHORT_HANGAR_LINKS;
+bool Mod::PEDIA_FACILITY_LOCKED_STATS;
+int Mod::PEDIA_FACILITY_ROWS_CUTOFF;
+int Mod::PEDIA_FACILITY_COL_OFFSET;
+bool Mod::GEO_SHOW_TARGET_COURSE_RANGE;
+double Mod::GEO_TARGET_COURSE_RANGE_MULT;
+int Mod::GEO_TARGET_RANGE_COL_OFFSET;
 bool Mod::EXTENDED_ITEM_RELOAD_COST;
 bool Mod::EXTENDED_INVENTORY_SLOT_SORTING;
 bool Mod::EXTENDED_RUNNING_COST;
@@ -298,6 +310,28 @@ void Mod::resetGlobalStatics()
 	PEDIA_FACILITY_RENDER_PARAMETERS[1] = 2; // pedia facility max height
 	PEDIA_FACILITY_RENDER_PARAMETERS[2] = 0; // pedia facility X offset
 	PEDIA_FACILITY_RENDER_PARAMETERS[3] = 0; // pedia facility Y offset
+
+	ACCELERATION_PENALTY[0] = 10; // standoff acceleration penalty
+	ACCELERATION_PENALTY[1] = 10; // cautious acceleration penalty
+	ACCELERATION_PENALTY[2] = 10; // combat acceleration penalty
+	ACCELERATION_PENALTY[3] = 10; // maneuver acceleration penalty
+
+	ACCELERATION_COEFF[0] = { 10, 20 }; // standoff +/- acceleration coefficient
+	ACCELERATION_COEFF[1] = { 15, 35 }; // cautious +/- acceleration coefficient
+	ACCELERATION_COEFF[2] = { 20, 50 }; // combat +/- acceleration coefficient
+	ACCELERATION_COEFF[3] = { 25, 70 }; // maneuver +/- acceleration coefficient
+
+	CRAFT_LIST_SHOW_CLASS = false; // show class column in base craft list
+	CRAFT_LIST_CLASS_SHORT = false; // show short class name in class column
+
+	BASE_SHORT_HANGAR_LINKS = false; // base short hangar to craft links
+	PEDIA_FACILITY_LOCKED_STATS = true; // scrollbar lock for facility stats
+	PEDIA_FACILITY_ROWS_CUTOFF = 5; // pedia facility stat rows cutoff
+	PEDIA_FACILITY_COL_OFFSET = 0; // pedia facility stats column offset
+
+	GEO_SHOW_TARGET_COURSE_RANGE = false; // show range to target in set course
+	GEO_TARGET_COURSE_RANGE_MULT = 1.0; // multiplier for distance conversion
+	GEO_TARGET_RANGE_COL_OFFSET = -10; // range column offset in set course
 
 	EXTENDED_ITEM_RELOAD_COST = false;
 	EXTENDED_INVENTORY_SLOT_SORTING = false;
@@ -424,7 +458,7 @@ Mod::Mod() :
 	_manaEnabled(false), _manaBattleUI(false), _manaTrainingPrimary(false), _manaTrainingSecondary(false), _manaReplenishAfterMission(true),
 	_loseMoney("loseGame"), _loseRating("loseGame"), _loseDefeat("loseGame"),
 	_ufoGlancingHitThreshold(0), _ufoBeamWidthParameter(1000),
-	_escortRange(20), _drawEnemyRadarCircles(1), _escortsJoinFightAgainstHK(true), _hunterKillerFastRetarget(true),
+	_escortRange(20), _drawEnemyRadarCircles(1), _escortsJoinFightAgainstHK(true), _hunterKillerFastRetarget(true), _craftAllowClassChange(false),
 	_crewEmergencyEvacuationSurvivalChance(100), _pilotsEmergencyEvacuationSurvivalChance(100),
 	_soldiersPerRank({-1, -1, 5, 11, 23, 30}),
 	_pilotAccuracyZeroPoint(55), _pilotAccuracyRange(40), _pilotReactionsZeroPoint(55), _pilotReactionsRange(60),
@@ -435,7 +469,7 @@ Mod::Mod() :
 	_tuRecoveryWakeUpNewTurn(100), _shortRadarRange(0), _buildTimeReductionScaling(100),
 	_defeatScore(0), _defeatFunds(0), _difficultyDemigod(false), _startingTime(6, 1, 1, 1999, 12, 0, 0), _startingDifficulty(0),
 	_baseDefenseMapFromLocation(0), _disableUnderwaterSounds(false), _enableUnitResponseSounds(false), _pediaReplaceCraftFuelWithRangeType(-1),
-	_facilityListOrder(0), _craftListOrder(0), _itemCategoryListOrder(0), _itemListOrder(0),
+	_defaultStartingBaseSet("STR_INIT_BASE_DEFAULT"), _facilityListOrder(0), _craftListOrder(0), _itemCategoryListOrder(0), _itemListOrder(0),
 	_researchListOrder(0),  _manufactureListOrder(0), _soldierBonusListOrder(0), _transformationListOrder(0), _ufopaediaListOrder(0), _invListOrder(0), _soldierListOrder(0),
 	_modCurrent(0), _statePalette(0)
 {
@@ -1885,6 +1919,25 @@ std::vector<std::string> Mod::getBaseFunctionNames(RuleBaseFacilityFunctions f) 
 }
 
 /**
+ * Get base functions rule based on function name.
+ */
+
+RuleBaseFacilityFunctions Mod::getBaseFunctionsRule(const std::string& name) const
+
+{
+	RuleBaseFacilityFunctions functions;
+	size_t index = _baseFunctionNames.getIndex(name);
+	if (index > 0)
+	{
+		functions.set(index);
+	}
+	else
+	{
+		Log(LOG_WARNING) << "Base function '" << name << "' doesn't exist! Returning empty rule.";
+	}
+	return functions;
+}
+/**
  * Loads a list of ints.
  * Another mod can only override the whole list, no partial edits allowed.
  */
@@ -2262,6 +2315,7 @@ void Mod::loadAll()
 	afterLoadHelper("craftWeapons", this, _craftWeapons, &RuleCraftWeapon::afterLoad);
 	afterLoadHelper("countries", this, _countries, &RuleCountry::afterLoad);
 	afterLoadHelper("crafts", this, _crafts, &RuleCraft::afterLoad);
+	afterLoadHelper("startingBaseSets", this, _startingBaseSets, &RuleStartingBaseSet::afterLoad);
 
 	for (auto& a : _armors)
 	{
@@ -2358,6 +2412,26 @@ void Mod::loadAll()
 		{
 			ruleNew->breakDown(this, shortcutPair.second);
 		}
+	}
+
+	// create default starting base set from pre-defined starting base rules
+	{
+		_defaultStartingBaseSet.BaseDefault = YAML::Clone(_startingBaseDefault);
+
+		if (_startingBaseBeginner && !_startingBaseBeginner.IsNull())
+			_defaultStartingBaseSet.BaseBeginner = YAML::Clone(_startingBaseBeginner);
+
+		if (_startingBaseExperienced && !_startingBaseExperienced.IsNull())
+			_defaultStartingBaseSet.BaseExperienced = YAML::Clone(_startingBaseExperienced);
+
+		if (_startingBaseVeteran && !_startingBaseVeteran.IsNull())
+			_defaultStartingBaseSet.BaseVeteran = YAML::Clone(_startingBaseVeteran);
+
+		if (_startingBaseGenius && !_startingBaseGenius.IsNull())
+			_defaultStartingBaseSet.BaseGenius = YAML::Clone(_startingBaseGenius);
+
+		if (_startingBaseSuperhuman && !_startingBaseSuperhuman.IsNull())
+			_defaultStartingBaseSet.BaseSuperhuman = YAML::Clone(_startingBaseSuperhuman);
 	}
 
 	// recommended user options
@@ -2652,6 +2726,33 @@ void Mod::loadConstants(const YAML::Node &node)
 			++k;
 		}
 	}
+	if (node["accelerationPenalty"])
+	{
+		int k = 0;
+		for (YAML::const_iterator j = node["accelerationPenalty"].begin(); j != node["accelerationPenalty"].end() && k < 4; ++j)
+		{
+			ACCELERATION_PENALTY[k] = (*j).as<int>(ACCELERATION_PENALTY[k]);
+			++k;
+		}
+	}
+	if (node["accelerationCoefficient"])
+	{
+		int k = 0;
+		for (YAML::const_iterator j = node["accelerationCoefficient"].begin(); j != node["accelerationCoefficient"].end() && k < 4; ++j)
+		{
+			ACCELERATION_COEFF[k] = (*j).as<std::pair<int, int>>(ACCELERATION_COEFF[k]);
+			++k;
+		}
+	}
+	CRAFT_LIST_SHOW_CLASS = node["baseCraftListShowClass"].as<bool>(CRAFT_LIST_SHOW_CLASS);
+	CRAFT_LIST_CLASS_SHORT = node["baseCraftListClassShort"].as<bool>(CRAFT_LIST_CLASS_SHORT);
+	BASE_SHORT_HANGAR_LINKS = node["baseShortHangarLinks"].as<bool>(BASE_SHORT_HANGAR_LINKS);
+	PEDIA_FACILITY_LOCKED_STATS = node["pediaFacilityLockedStats"].as<bool>(PEDIA_FACILITY_LOCKED_STATS);
+	PEDIA_FACILITY_ROWS_CUTOFF = node["pediaFacilityRowsCutoff"].as<int>(PEDIA_FACILITY_ROWS_CUTOFF);
+	PEDIA_FACILITY_COL_OFFSET = node["pediaFacilityColOffset"].as<int>(PEDIA_FACILITY_COL_OFFSET);
+	GEO_SHOW_TARGET_COURSE_RANGE = node["geoShowTargetCourseRange"].as<bool>(GEO_SHOW_TARGET_COURSE_RANGE);
+	GEO_TARGET_COURSE_RANGE_MULT = node["geoTargetCourseRangeMult"].as<float>(GEO_TARGET_COURSE_RANGE_MULT);
+	GEO_TARGET_RANGE_COL_OFFSET = node["geoTargetRangeColOffset"].as<int>(GEO_TARGET_RANGE_COL_OFFSET);
 	EXTENDED_ITEM_RELOAD_COST = node["extendedItemReloadCost"].as<bool>(EXTENDED_ITEM_RELOAD_COST);
 	EXTENDED_INVENTORY_SLOT_SORTING = node["extendedInventorySlotSorting"].as<bool>(EXTENDED_INVENTORY_SLOT_SORTING);
 	EXTENDED_RUNNING_COST = node["extendedRunningCost"].as<bool>(EXTENDED_RUNNING_COST);
@@ -2923,6 +3024,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		if (rule != 0)
 		{
 			rule->load(*i, this);
+		}
+	}
+	for (YAML::const_iterator i : iterateRules("startingBaseSets", "name"))
+	{
+		RuleStartingBaseSet *rule = loadRule(*i, &_startingBaseSets, &_startingBaseSetsIndex, "name");
+		if (rule != 0)
+		{
+			rule->load(*i);
 		}
 	}
 
@@ -3527,6 +3636,13 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		_maxStaticLightDistance = lighting["maxStatic"].as<int>(_maxStaticLightDistance);
 		_maxDynamicLightDistance = lighting["maxDynamic"].as<int>(_maxDynamicLightDistance);
 		_enhancedLighting = lighting["enhanced"].as<int>(_enhancedLighting);
+	}
+
+	// craft classification variables
+	if (const YAML::Node &craftClasses = loadDocInfoHelper("craftClasses"))
+	{
+		_craftSizeClassMap = craftClasses["sizeClassMap"].as<std::map<int, std::string>>(_craftSizeClassMap);
+		_craftAllowClassChange = craftClasses["allowClassChange"].as<bool>(_craftAllowClassChange);
 	}
 }
 
@@ -4305,6 +4421,35 @@ const std::vector<std::string> &Mod::getDeploymentsList() const
 	return _deploymentsIndex;
 }
 
+/**
+ * Returns the rules for the default starting base set.
+ * @return Rules for the starting base set.
+ */
+const RuleStartingBaseSet *Mod::getDefaultStartingBaseSet() const
+{
+	return &_defaultStartingBaseSet;
+}
+
+/**
+ * Returns the rules for the specified starting base set.
+ * @param id Starting base set name.
+ * @return Rules for the starting base set.
+ */
+const RuleStartingBaseSet *Mod::getStartingBaseSet(const std::string &id, bool error) const
+{
+	return getRule(id, "Starting Base Set", _startingBaseSets, error);
+}
+
+/**
+ * Returns the list of all starting base sets
+ * provided by the mod.
+ * @return List of starting base sets.
+ */
+const std::vector<std::string> &Mod::getStartingBaseSetsList() const
+{
+	return _startingBaseSetsIndex;
+}
+
 
 /**
  * Returns the info about a specific armor.
@@ -4710,6 +4855,44 @@ const YAML::Node &Mod::getStartingBase(GameDifficulty diff) const
 	}
 
 	return _startingBaseDefault;
+}
+
+/**
+ * Overrides custom starting bases data with ones from set.
+ */
+void Mod::setStartingBase(const RuleStartingBaseSet* baseSet, bool cleanSet)
+{
+	if (cleanSet)
+	{
+		_startingBaseDefault = YAML::Node();
+		_startingBaseBeginner = YAML::Node();
+		_startingBaseExperienced = YAML::Node();
+		_startingBaseVeteran = YAML::Node();
+		_startingBaseGenius = YAML::Node();
+		_startingBaseSuperhuman = YAML::Node();
+	}
+
+	_startingBaseDefault = YAML::Clone(baseSet->BaseDefault);
+	if (baseSet->BaseBeginner && !baseSet->BaseBeginner.IsNull())
+	{
+		_startingBaseBeginner = YAML::Clone(baseSet->BaseBeginner);
+	}
+	if (baseSet->BaseExperienced && !baseSet->BaseExperienced.IsNull())
+	{
+		_startingBaseExperienced = YAML::Clone(baseSet->BaseExperienced);
+	}
+	if (baseSet->BaseVeteran && !baseSet->BaseVeteran.IsNull())
+	{
+		_startingBaseVeteran = YAML::Clone(baseSet->BaseVeteran);
+	}
+	if (baseSet->BaseGenius && !baseSet->BaseGenius.IsNull())
+	{
+		_startingBaseGenius = YAML::Clone(baseSet->BaseGenius);
+	}
+	if (baseSet->BaseSuperhuman && !baseSet->BaseSuperhuman.IsNull())
+	{
+		_startingBaseSuperhuman = YAML::Clone(baseSet->BaseSuperhuman);
+	}
 }
 
 /**
@@ -5197,6 +5380,30 @@ const std::vector<std::string> &Mod::getHiddenMovementBackgrounds() const
 const std::vector<int> &Mod::getFlagByKills() const
 {
 	return _flagByKills;
+}
+
+const std::map<int, std::string> *Mod::getCraftSizeClassMap() const
+{
+	return &_craftSizeClassMap;
+}
+
+const std::string Mod::getCraftClassFromSize(const int& craftSize) const
+{
+	if (getCraftSizeClassMap()->empty())
+		return "";
+
+	int temp = INT_MIN;
+	std::string craftClass = "";
+	const auto* craftClassMap = getCraftSizeClassMap();
+	for (const auto& [intSize, strClass] : *craftClassMap)
+	{
+		if (intSize > temp && craftSize >= intSize)
+		{
+			craftClass = strClass;
+			temp = intSize;
+		}
+	}
+	return craftClass;
 }
 
 namespace

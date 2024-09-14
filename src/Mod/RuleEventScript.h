@@ -41,6 +41,7 @@ private:
 	std::map<std::string, bool> _researchTriggers;
 	std::map<std::string, bool> _itemTriggers;
 	std::map<std::string, bool> _facilityTriggers;
+	std::map<std::string, bool> _baseFunctionTriggers;
 	std::map<std::string, bool> _soldierTypeTriggers;
 	std::map<std::string, bool> _xcomBaseInRegionTriggers;
 	std::map<std::string, bool> _xcomBaseInCountryTriggers;
@@ -54,6 +55,8 @@ public:
 	void load(const YAML::Node &node);
 	/// Gets the name of the script command.
 	const std::string &getType() const { return _type; }
+	/// Gets the list of all events (with weights).
+	const std::vector<std::pair<size_t, WeightedOptions*>> &getEventWeights() const { return _eventWeights; }
 	/// Gets the list of one time sequential events.
 	const std::vector<std::string> &getOneTimeSequentialEvents() const { return _oneTimeSequentialEvents; }
 	/// Gets the list of one time random events (with weights).
@@ -90,6 +93,8 @@ public:
 	const std::map<std::string, bool> &getItemTriggers() const { return _itemTriggers; }
 	/// Gets the facility triggers that may apply to this command.
 	const std::map<std::string, bool> &getFacilityTriggers() const { return _facilityTriggers; }
+	/// Gets the base function triggers that may apply to this command.
+	const std::map<std::string, bool> &getBaseFunctionTriggers() const { return _baseFunctionTriggers; }
 	/// Gets the soldier type triggers that may apply to this command.
 	const std::map<std::string, bool> &getSoldierTypeTriggers() const { return _soldierTypeTriggers; }
 	/// Gets the xcom base triggers that may apply to this command.

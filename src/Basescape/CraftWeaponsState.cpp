@@ -166,10 +166,55 @@ void CraftWeaponsState::btnCancelClick(Action *)
  */
 void CraftWeaponsState::lstWeaponsClick(Action *)
 {
+	bool sizeChanged = false;
 	CraftWeapon *current = _craft->getWeapons()->at(_weapon);
 
 	const RuleCraftWeapon* refWeapon = _weapons[_lstWeapons->getSelectedRow()];
 	const RuleCraftWeapon* currWeapon = current ? current->getRules() : nullptr;
+
+	// Validate craft size after refit
+	{
+		int refWeaponCraftSize = refWeapon ? refWeapon->getBonusStats().craftSize : 0;
+		int currWeaponCraftSize = currWeapon ? currWeapon->getBonusStats().craftSize : 0;
+		int diffCraftSize = (refWeaponCraftSize - currWeaponCraftSize);
+		if (diffCraftSize)
+		{
+			// Check, if game rules allow craft to change its classification
+			if ((_game->getMod()->getCraftClassFromSize(_craft->getCraftSize() + diffCraftSize) !=
+				_game->getMod()->getCraftClassFromSize(_craft->getCraftSize()))
+				&& !_game->getMod()->getCraftAllowClassChange())
+			{
+				_game->popState();
+				_game->pushState(new ErrorMessageState(
+					tr("STR_NO_CRAFT_CLASS_CHANGE"),
+					_palette,
+					_game->getMod()->getInterface("craftWeapons")->getElement("errorMessage")->color,
+					"BACK14.SCR",
+					_game->getMod()->getInterface("craftWeapons")->getElement("errorPalette")->color)
+				);
+				return;
+			}
+
+			// Check, if there is suitable hangar slot for the new craft size
+			if (!_base->allowCraftRefit(_craft, _craft->getCraftSize() + diffCraftSize))
+			{
+				_game->popState();
+				_game->pushState(new ErrorMessageState(
+					tr("STR_NO_FREE_HANGARS_FOR_REFIT"),
+					_palette,
+					_game->getMod()->getInterface("craftWeapons")->getElement("errorMessage")->color,
+					"BACK14.SCR",
+					_game->getMod()->getInterface("craftWeapons")->getElement("errorMessage")->color)
+				);
+				return;
+			}
+
+			// Notify game to sync hangar slots, since craft size got changed
+			sizeChanged = true;
+		}
+	}
+
+	// Validate soldier capacity after refit
 	{
 		int refCapBonus1 = refWeapon ? refWeapon->getBonusStats().soldiers : 0;
 		int currCapBonus1 = currWeapon ? currWeapon->getBonusStats().soldiers : 0;
@@ -190,6 +235,8 @@ void CraftWeaponsState::lstWeaponsClick(Action *)
 			}
 		}
 	}
+
+	// Validate vehicle capacity after refit
 	{
 		int refCapBonus2 = refWeapon ? refWeapon->getBonusStats().vehicles : 0;
 		int currCapBonus2 = currWeapon ? currWeapon->getBonusStats().vehicles : 0;
@@ -210,6 +257,8 @@ void CraftWeaponsState::lstWeaponsClick(Action *)
 			}
 		}
 	}
+
+	// Validate max item capacity after refit
 	{
 		int refCapBonus3 = refWeapon ? refWeapon->getBonusStats().maxItems : 0;
 		int currCapBonus3 = currWeapon ? currWeapon->getBonusStats().maxItems : 0;
@@ -295,6 +344,9 @@ void CraftWeaponsState::lstWeaponsClick(Action *)
 		_craft->getWeapons()->at(_weapon) = sel;
 	}
 
+	// Wrap up and finish function execution
+	if (sizeChanged)
+		_base->syncCraftSlots();
 	_craft->checkup();
 	_game->popState();
 }

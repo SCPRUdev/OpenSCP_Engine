@@ -483,7 +483,7 @@ void BaseView::draw()
 		}
 	}
 
-	auto craftIt = _base->getCrafts()->begin();
+	auto craftSlotIt = _base->getCraftSlots()->begin();
 
 	for (const auto* fac : *_base->getFacilities())
 	{
@@ -560,7 +560,14 @@ void BaseView::draw()
 			{
 				if (fac->getRules()->getSpriteEnabled())
 				{
-					Surface *frame = _texture->getFrame(fac->getRules()->getSpriteFacility() + num);
+					Surface *frame;
+
+					int outline = fac->getRules()->getSizeX() * fac->getRules()->getSizeY();
+					if (fac->getRules()->useAltBuildSprite() && fac->getBuildTime() > 0)
+						frame = _texture->getFrame(fac->getRules()->getSpriteFacility() + num + outline);
+					else
+						frame = _texture->getFrame(fac->getRules()->getSpriteFacility() + num);
+
 					int fx = (x * GRID_SIZE);
 					int fy = (y * GRID_SIZE);
 					frame->blitNShade(this, fx, fy);
@@ -571,20 +578,23 @@ void BaseView::draw()
 		}
 
 		// Draw crafts
-		fac->setCraftForDrawing(0);
 		if (fac->getBuildTime() == 0 && fac->getRules()->getCrafts() > 0)
 		{
-			if (craftIt != _base->getCrafts()->end())
+			for (int i = 0; i < fac->getRules()->getCraftGroupSum(); ++i)
 			{
-				if ((*craftIt)->getStatus() != "STR_OUT")
+				if (craftSlotIt != _base->getCraftSlots()->end())
 				{
-					Surface *frame = _texture->getFrame((*craftIt)->getSkinSprite() + 33);
-					int fx = (fac->getX() * GRID_SIZE + (fac->getRules()->getSizeX() - 1) * GRID_SIZE / 2 + 2);
-					int fy = (fac->getY() * GRID_SIZE + (fac->getRules()->getSizeY() - 1) * GRID_SIZE / 2 - 4);
-					frame->blitNShade(this, fx, fy);
-					fac->setCraftForDrawing(*craftIt);
+					if (craftSlotIt->craft != nullptr && !craftSlotIt->hidden && craftSlotIt->craft->getStatus() != "STR_OUT")
+					{
+						Craft* slotCraft = craftSlotIt->craft;
+						const RuleCraft* craftRules = slotCraft->getRules();
+						Surface* frame = _texture->getFrame(slotCraft->getSkinSprite() + 33);
+						frame->blitNShade(this,
+							craftSlotIt->x + craftRules->getSizeOffsetX(),
+							craftSlotIt->y + craftRules->getSizeOffsetY());
+					}
+					++craftSlotIt;
 				}
-				++craftIt;
 			}
 		}
 

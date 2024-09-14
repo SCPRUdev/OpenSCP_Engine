@@ -556,6 +556,7 @@ void GeoscapeState::handle(Action *action)
 						facility->setBuildTime(0);
 						facility->setIfHadPreviousFacility(false);
 					}
+					xbase->syncCraftChanges();
 				}
 			}
 			// "ctrl-3"
@@ -1167,6 +1168,7 @@ void GeoscapeState::time5Seconds()
 				_game->getSavedGame()->stopHuntingXcomCraft(xcraft); // craft destroyed in dogfight
 				Craft *craft = *craftIt;
 				craftIt = xbase->removeCraft(craft, false);
+				xbase->syncCraftSlots();
 				delete craft;
 				continue;
 			}
@@ -2111,8 +2113,14 @@ void GeoscapeState::time1Hour()
 	// Handle craft maintenance
 	for (auto* xbase : *_game->getSavedGame()->getBases())
 	{
+		int numCraftsOut = 0;
+
 		for (auto* xcraft : *xbase->getCrafts())
 		{
+			if (xcraft->getStatus() == "STR_OUT")
+			{
+				++numCraftsOut;
+			}
 			if (xcraft->getStatus() == "STR_REPAIRS")
 			{
 				xcraft->repair();
@@ -2134,6 +2142,15 @@ void GeoscapeState::time1Hour()
 				// Recharge craft shields in parallel (no wait for repair/rearm/refuel)
 				xcraft->setShield(xcraft->getShield() + xcraft->getRules()->getShieldRechargeAtBase());
 			}
+		}
+
+		if ((xbase->getUsedHangars() - numCraftsOut) > xbase->getAvailableHangars())
+		{
+			timerReset();
+			popup(new ErrorMessageState(tr("STR_NO_FREE_HANGARS").arg(xbase->getName()), _palette,
+				_game->getMod()->getInterface("geoscape")->getElement("errorMessage")->color, "BACK14.SCR",
+				_game->getMod()->getInterface("geoscape")->getElement("errorPalette")->color));
+			popup(new SellState(xbase, 0));
 		}
 	}
 
@@ -2369,6 +2386,8 @@ void GeoscapeState::time1Day()
 				if (facility->getBuildTime() == 0)
 				{
 					finishedFacilities[facility->getRules()] += 1;
+					if (facility->getRules()->getCrafts() > 0)
+						xbase->syncCraftChanges();
 				}
 			}
 		}
@@ -2896,9 +2915,133 @@ void GeoscapeState::globeClick(Action *action)
 		std::vector<Target*> v = _globe->getTargets(mouseX, mouseY, false, 0);
 		if (!v.empty())
 		{
-			// Pass empty vector
-			std::vector<Craft*> crafts;
-			_game->pushState(new MultipleTargetsState(v, crafts, this, true));
+			if (Options::debug && (_game->isShiftPressed() || _game->isCtrlPressed()))
+			{
+				// Debug trigger base defense or missile strike.
+				bool isMissileStrike = _game->isCtrlPressed();
+				for (auto* refTarget : v)
+				{
+					// If x-com base not found, check next target in the list.
+					Base* refBase = dynamic_cast<Base*>(refTarget);
+					if (refBase == nullptr) continue;
+
+					// Get list of all declared missions and UFOs in the game.
+					std::string baseRegion;
+					std::vector<std::string> ufoList;
+					std::vector<std::string> missionList;
+					const auto& ufoAll = _game->getMod()->getUfosList();
+					const auto& regionAll = _game->getMod()->getRegionsList();
+					const auto& missionAll = _game->getMod()->getAlienMissionList();
+
+					// Find the region, where targeted x-com base is located.
+					for (const auto& regionId : regionAll)
+					{
+						const auto& refRegion = _game->getMod()->getRegion(regionId);
+						if (refRegion->insideRegion(refBase->getLongitude(), refBase->getLatitude()))
+						{
+							baseRegion = regionId;
+						}
+					}
+
+					// Get list of all valid UFOs (available in missions) for the task.
+					for (const auto& ufoId : ufoAll)
+					{
+						const auto& refUfo = _game->getMod()->getUfo(ufoId);
+						if ((isMissileStrike && refUfo->getMissilePower() != 0) || (!isMissileStrike
+							&& !refUfo->isUnmanned() && refUfo->getMissilePower() == 0))
+						{
+							for (const auto& missionId : missionAll)
+							{
+								const auto& refMission = _game->getMod()->getAlienMission(missionId);
+								if (refMission->getSpawnUfo() == ufoId)
+								{
+									ufoList.push_back(ufoId);
+									break;
+								}
+							}
+						}
+					}
+
+					// Get list of all valid missions for randomly selected UFO.
+					const auto& randomUfoId = ufoList.size() > 0 ? ufoList.at(RNG::generate(0, ufoList.size() - 1)) : "";
+					for (const auto& missionId : missionAll)
+					{
+						if (randomUfoId.empty()) break;
+						const auto& refMission = _game->getMod()->getAlienMission(missionId);
+						if (refMission->getSpawnUfo() == randomUfoId)
+						{
+							missionList.push_back(missionId);
+						}
+					}
+
+					// Select random Mission and select random Race from it.
+					const auto& randomMissionId = missionList.size() > 0 ? missionList.at(
+						RNG::generate(0, missionList.size() - 1)) : "";
+					const auto& randomRaceId = !randomMissionId.empty() ? _game->getMod()->getAlienMission(
+						randomMissionId)->generateRace(_game->getSavedGame()->getMonthsPassed()) : "";
+
+					// Initiate the base invasion or missile strike, if everything is valid.
+					if (!baseRegion.empty() && !randomUfoId.empty() && !randomMissionId.empty() && !randomRaceId.empty())
+					{
+						// Turn string IDs into actual rules that can be used.
+						const auto& chosenUfo = _game->getMod()->getUfo(randomUfoId);
+						const auto& chosenMission = _game->getMod()->getAlienMission(randomMissionId);
+						const auto& baseTrajectory = *_game->getMod()->getUfoTrajectory(UfoTrajectory::RETALIATION_ASSAULT_RUN, true);
+
+						// Since everything is valid, it will be good idea to log it.
+						if (isMissileStrike) Log(LOG_DEBUG) << "Missile Strike Triggered! ID: " << randomUfoId
+							<< ", RACE: " << randomRaceId << ", POWER: " << chosenUfo->getMissilePower();
+						else Log(LOG_DEBUG) << "Base Invasion Triggered! ID: " << randomUfoId
+							<< ", RACE: " << randomRaceId << ", MISSION: " << randomMissionId;
+
+						// List new instances of UFO and mission, so game can clean it up later.
+						AlienMission* debugMission = new AlienMission(*chosenMission);
+						Ufo* debugUfo = new Ufo(chosenUfo, _game->getSavedGame()->getId("STR_UFO_UNIQUE"));
+						_game->getSavedGame()->getAlienMissions().push_back(debugMission);
+						_game->getSavedGame()->getUfos()->push_back(debugUfo);
+
+						// Ignore something from these mission settings and game will crash.
+						debugMission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
+						debugMission->setRegion(baseRegion, *_game->getMod());
+						debugMission->setMultiUfoRetaliationInProgress(true);
+						debugMission->setRace(randomRaceId);
+
+						// Ignore something from these UFO settings and game will crash.
+						debugUfo->setMissionInfo(debugMission, &baseTrajectory);
+						debugUfo->setAltitude(baseTrajectory.getAltitude(0));
+						debugUfo->setSpeed(baseTrajectory.getSpeedPercentage(0) *
+							debugUfo->getCraftStats().speedMax);
+						debugUfo->setLongitude(refBase->getLongitude() + RNG::generate(-0.5f, 0.5f));
+						debugUfo->setLatitude(refBase->getLatitude() + RNG::generate(-0.5f, 0.5f));
+
+						// If you won't create new waypoint instance, the game will crash.
+						Waypoint *debugWaypoint = new Waypoint();
+						debugWaypoint->setLongitude(refBase->getLongitude());
+						debugWaypoint->setLatitude(refBase->getLatitude());
+						debugUfo->setDestination(debugWaypoint);
+
+						// UFO is always visible, in case if you want to dogfight it.
+						debugUfo->setDetected(true);
+					}
+					else
+					{
+						Log(LOG_WARNING) << "Attempted to trigger " << (isMissileStrike ? "Missile Strike" : "Base Invasion")
+							<< "! However, one or more elements were missing. UfoID: [" << randomUfoId << "], MissionID: ["
+							<< randomMissionId << "], RaceID: [" << randomRaceId << "], RegionID: [" << baseRegion << "]. "
+							<< "Ensure that there is valid UFO, valid Race, valid Mission and that they are linked together."
+							<< (isMissileStrike ? " Also, ensure that UFO has 'missilePower' greater than 0 as well." : "");
+					}
+
+					// Stop the loop, since x-com base was found.
+					break;
+				}
+			}
+			else
+			{
+				// Pass empty vector
+				std::vector<Craft*> crafts;
+				_game->pushState(new MultipleTargetsState(v, crafts, this, true));
+			}
 		}
 	}
 
@@ -3464,6 +3607,14 @@ void GeoscapeState::handleBaseDefense(Base *base, Ufo *ufo)
 
 			// let the player know that some facilities were destroyed, but the base survived
 			popup(new BaseDestroyedState(base, ufo, true, true));
+
+			// check if we have enough hangar space, if not notify the user.
+			if (base->getUsedHangars() > base->getAvailableHangars())
+			{
+				popup(new ErrorMessageState(tr("STR_NO_FREE_HANGARS_AFTER_STRIKE").arg(base->getName()), _palette,
+					_game->getMod()->getInterface("geoscape")->getElement("errorMessage")->color, "BACK14.SCR",
+					_game->getMod()->getInterface("geoscape")->getElement("errorPalette")->color));
+			}
 		}
 	}
 	else if (base->getAvailableSoldiers(true, true) > 0 || !base->getVehicles()->empty())
@@ -3596,6 +3747,26 @@ void GeoscapeState::determineAlienMissions()
 					for (auto& triggerFacility : arcScript->getFacilityTriggers())
 					{
 						triggerHappy = (save->isFacilityBuilt(triggerFacility.first) == triggerFacility.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : arcScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first, _game->getMod()) == triggerBaseFunc.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				if (triggerHappy)
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : arcScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+							_game->getMod()) == triggerBaseFunc.second);
 						if (!triggerHappy)
 							break;
 					}
@@ -3774,6 +3945,26 @@ void GeoscapeState::determineAlienMissions()
 						break;
 				}
 			}
+			{
+				// base functions requirements
+				for (auto& triggerBaseFunc : command->getBaseFunctionTriggers())
+				{
+					triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first, _game->getMod()) == triggerBaseFunc.second);
+					if (!triggerHappy)
+						break;
+				}
+			}
+			if (triggerHappy)
+			{
+				// base functions requirements
+				for (auto& triggerBaseFunc : command->getBaseFunctionTriggers())
+				{
+					triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+						_game->getMod()) == triggerBaseFunc.second);
+					if (!triggerHappy)
+						break;
+				}
+			}
 			if (triggerHappy)
 			{
 				// xcom base requirements
@@ -3936,6 +4127,26 @@ void GeoscapeState::determineAlienMissions()
 					for (auto& triggerFacility : eventScript->getFacilityTriggers())
 					{
 						triggerHappy = (save->isFacilityBuilt(triggerFacility.first) == triggerFacility.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : eventScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,	_game->getMod()) == triggerBaseFunc.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				if (triggerHappy)
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : eventScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+							_game->getMod()) == triggerBaseFunc.second);
 						if (!triggerHappy)
 							break;
 					}
