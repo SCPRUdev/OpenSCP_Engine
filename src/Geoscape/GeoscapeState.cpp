@@ -406,6 +406,16 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 
 	_txtSlacking->setAlign(ALIGN_RIGHT);
 
+	if (!_game->getMod()->getNewBaseUnlockResearch().empty())
+	{
+		bool newBasesUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getNewBaseUnlockResearch(), true);
+		if (!newBasesUnlocked)
+		{
+			_txtFunds->setVisible(false);
+			_btnGraphs->setVisible(false);
+		}
+	}
+
 	if (Options::showFundsOnGeoscape)
 	{
 		_txtHour->setY(_txtHour->getY()+6);
@@ -532,13 +542,13 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-1"
 			if (action->getDetails()->key.keysym.sym == SDLK_1)
 			{
-				_txtDebug->setText("I'M A BILLIONAIRE! ALMOST...");
+				_txtDebug->setText(tr("STR_DEBUG_GIVEMONEY"));
 				_game->getSavedGame()->setFunds(999999999);
 			}
 			// "ctrl-2"
 			if (action->getDetails()->key.keysym.sym == SDLK_2)
 			{
-				_txtDebug->setText("ALL FACILITY CONSTRUCTION COMPLETED");
+				_txtDebug->setText(tr("STR_DEBUG_FINISHALLBUILDS"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					for (auto* facility : *xbase->getFacilities())
@@ -552,7 +562,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-3"
 			if (action->getDetails()->key.keysym.sym == SDLK_3)
 			{
-				_txtDebug->setText("+50 SCIENTISTS/ENGINEERS");
+				_txtDebug->setText(tr("STR_DEBUG_GIVEPERSONNEL"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					xbase->setScientists(xbase->getScientists() + 50);
@@ -562,7 +572,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-4"
 			if (action->getDetails()->key.keysym.sym == SDLK_4)
 			{
-				_txtDebug->setText("+2 ALL ITEMS");
+				_txtDebug->setText(tr("STR_DEBUG_GIVEALLITEMS"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					for (auto& itemType : _game->getMod()->getItemsList())
@@ -578,7 +588,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-5"
 			if (action->getDetails()->key.keysym.sym == SDLK_5)
 			{
-				_txtDebug->setText("+2 ALL LIVE ALIENS");
+				_txtDebug->setText(tr("STR_DEBUG_GIVEPRISONERS"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					for (auto& itemType : _game->getMod()->getItemsList())
@@ -594,7 +604,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-6"
 			if (action->getDetails()->key.keysym.sym == SDLK_6)
 			{
-				_txtDebug->setText("XCOM/ALIEN ACTIVITY FOR THIS MONTH RESET");
+				_txtDebug->setText(tr("STR_DEBUG_RESETACTIVITY"));
 				size_t invertedEntry = _game->getSavedGame()->getFundsList().size() - 1;
 				for (auto* region : *_game->getSavedGame()->getRegions())
 				{
@@ -610,7 +620,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-7"
 			if (action->getDetails()->key.keysym.sym == SDLK_7)
 			{
-				_txtDebug->setText("BIG BROTHER SEES ALL");
+				_txtDebug->setText(tr("STR_DEBUG_SHOWTARGETS"));
 				for (auto* ufo : *_game->getSavedGame()->getUfos())
 				{
 					ufo->setDetected(true);
@@ -624,7 +634,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-a"
 			if (action->getDetails()->key.keysym.sym == SDLK_a)
 			{
-				_txtDebug->setText("SOLDIER DIARIES DELETED");
+				_txtDebug->setText(tr("STR_DEBUG_DELETEDIARIES"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					for (auto* soldier : *xbase->getSoldiers())
@@ -636,7 +646,7 @@ void GeoscapeState::handle(Action *action)
 			// "ctrl-c"
 			if (action->getDetails()->key.keysym.sym == SDLK_c)
 			{
-				_txtDebug->setText("SOLDIER COMMENDATIONS DELETED");
+				_txtDebug->setText(tr("STR_DEBUG_DELETECOMMENDATIONS"));
 				for (auto* xbase : *_game->getSavedGame()->getBases())
 				{
 					for (auto* soldier : *xbase->getSoldiers())
@@ -3741,6 +3751,15 @@ void GeoscapeState::determineAlienMissions()
 							break;
 					}
 				}
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : arcScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first, _game->getMod()) == triggerBaseFunc.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
 				if (triggerHappy)
 				{
 					// base functions requirements
@@ -3926,6 +3945,15 @@ void GeoscapeState::determineAlienMissions()
 						break;
 				}
 			}
+			{
+				// base functions requirements
+				for (auto& triggerBaseFunc : command->getBaseFunctionTriggers())
+				{
+					triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first, _game->getMod()) == triggerBaseFunc.second);
+					if (!triggerHappy)
+						break;
+				}
+			}
 			if (triggerHappy)
 			{
 				// base functions requirements
@@ -4099,6 +4127,15 @@ void GeoscapeState::determineAlienMissions()
 					for (auto& triggerFacility : eventScript->getFacilityTriggers())
 					{
 						triggerHappy = (save->isFacilityBuilt(triggerFacility.first) == triggerFacility.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : eventScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,	_game->getMod()) == triggerBaseFunc.second);
 						if (!triggerHappy)
 							break;
 					}

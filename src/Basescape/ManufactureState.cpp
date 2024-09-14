@@ -58,9 +58,9 @@ ManufactureState::ManufactureState(Base *base) : _base(base)
 	_txtSpace = new Text(150, 9, 8, 34);
 	_txtFunds = new Text(150, 9, 160, 34);
 	_txtItem = new Text(80, 9, 10, 52);
-	_txtEngineers = new Text(56, 18, 112, 44);
-	_txtProduced = new Text(56, 18, 168, 44);
-	_txtCost = new Text(44, 27, 222, 44);
+	_txtEngineers = new Text(46, 18, 102, 44);
+	_txtProduced = new Text(46, 18, 158, 44);
+	_txtCost = new Text(44, 27, 212, 44);
 	_txtTimeLeft = new Text(60, 27, 260, 44);
 	_lstManufacture = new TextList(288, 88, 8, 80);
 
@@ -144,6 +144,16 @@ void ManufactureState::init()
 {
 	State::init();
 	fillProductionList(0);
+
+	if (!_game->getMod()->getNewBaseUnlockResearch().empty())
+	{
+		bool newBasesUnlocked = _game->getSavedGame()->isResearched(_game->getMod()->getNewBaseUnlockResearch(), true);
+		if (!newBasesUnlocked)
+		{
+			_txtFunds->setVisible(false);
+		}
+	}
+
 
 	if (Options::oxceManufactureScrollSpeed > 0 || Options::oxceManufactureScrollSpeedWithCtrl > 0)
 	{

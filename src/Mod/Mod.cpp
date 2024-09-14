@@ -1921,7 +1921,9 @@ std::vector<std::string> Mod::getBaseFunctionNames(RuleBaseFacilityFunctions f) 
 /**
  * Get base functions rule based on function name.
  */
-RuleBaseFacilityFunctions Mod::getBaseFunctionsRule(const std::string &name) const
+
+RuleBaseFacilityFunctions Mod::getBaseFunctionsRule(const std::string& name) const
+
 {
 	RuleBaseFacilityFunctions functions;
 	size_t index = _baseFunctionNames.getIndex(name);
@@ -1935,6 +1937,7 @@ RuleBaseFacilityFunctions Mod::getBaseFunctionsRule(const std::string &name) con
 	}
 	return functions;
 }
+
 
 /**
  * Loads a list of ints.
