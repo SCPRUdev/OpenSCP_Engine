@@ -2790,7 +2790,7 @@ void GeoscapeState::time1Day()
 	{
 		int month = _game->getSavedGame()->getMonthsPassed();
 		int currentScore = _game->getSavedGame()->getCurrentScore(month + 1);
-		int performanceBonus = currentScore * mod->getPerformanceBonusFactor();
+		int performanceBonus = mod->getPerformanceBonus(currentScore);
 		if (performanceBonus < 0)
 		{
 			performanceBonus = 0; // bonus only, no malus
@@ -3651,7 +3651,7 @@ void GeoscapeState::determineAlienMissions()
 	Mod *mod = _game->getMod();
 	int month = _game->getSavedGame()->getMonthsPassed();
 	int currentScore = save->getCurrentScore(month); // _monthsPassed was already increased by 1
-	int performanceBonus = currentScore * mod->getPerformanceBonusFactor();
+	int performanceBonus = mod->getPerformanceBonus(currentScore);
 	if (performanceBonus < 0)
 	{
 		performanceBonus = 0; // bonus only, no malus
@@ -3736,7 +3736,7 @@ void GeoscapeState::determineAlienMissions()
 					// item requirements
 					for (auto& triggerItem : arcScript->getItemTriggers())
 					{
-						triggerHappy = (save->isItemObtained(triggerItem.first) == triggerItem.second);
+						triggerHappy = (save->isItemObtained(triggerItem.first, mod) == triggerItem.second);
 						if (!triggerHappy)
 							break;
 					}
@@ -3756,6 +3756,17 @@ void GeoscapeState::determineAlienMissions()
 					for (auto& triggerBaseFunc : arcScript->getBaseFunctionTriggers())
 					{
 						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first, _game->getMod()) == triggerBaseFunc.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				if (triggerHappy)
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : arcScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+							_game->getMod()) == triggerBaseFunc.second);
 						if (!triggerHappy)
 							break;
 					}
@@ -3930,7 +3941,7 @@ void GeoscapeState::determineAlienMissions()
 				// item requirements
 				for (auto& triggerItem : command->getItemTriggers())
 				{
-					triggerHappy = (save->isItemObtained(triggerItem.first) == triggerItem.second);
+					triggerHappy = (save->isItemObtained(triggerItem.first, mod) == triggerItem.second);
 					if (!triggerHappy)
 						break;
 				}
@@ -3950,6 +3961,17 @@ void GeoscapeState::determineAlienMissions()
 				for (auto& triggerBaseFunc : command->getBaseFunctionTriggers())
 				{
 					triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first, _game->getMod()) == triggerBaseFunc.second);
+					if (!triggerHappy)
+						break;
+				}
+			}
+			if (triggerHappy)
+			{
+				// base functions requirements
+				for (auto& triggerBaseFunc : command->getBaseFunctionTriggers())
+				{
+					triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+						_game->getMod()) == triggerBaseFunc.second);
 					if (!triggerHappy)
 						break;
 				}
@@ -4116,7 +4138,7 @@ void GeoscapeState::determineAlienMissions()
 					// item requirements
 					for (auto& triggerItem : eventScript->getItemTriggers())
 					{
-						triggerHappy = (save->isItemObtained(triggerItem.first) == triggerItem.second);
+						triggerHappy = (save->isItemObtained(triggerItem.first, mod) == triggerItem.second);
 						if (!triggerHappy)
 							break;
 					}
@@ -4136,6 +4158,17 @@ void GeoscapeState::determineAlienMissions()
 					for (auto& triggerBaseFunc : eventScript->getBaseFunctionTriggers())
 					{
 						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,	_game->getMod()) == triggerBaseFunc.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				if (triggerHappy)
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : eventScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+							_game->getMod()) == triggerBaseFunc.second);
 						if (!triggerHappy)
 							break;
 					}
