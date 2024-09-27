@@ -1939,7 +1939,6 @@ RuleBaseFacilityFunctions Mod::getBaseFunctionsRule(const std::string &name) con
 	}
 	return functions;
 }
-
 /**
  * Loads a list of ints.
  * Another mod can only override the whole list, no partial edits allowed.

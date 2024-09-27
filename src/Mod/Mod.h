@@ -573,7 +573,6 @@ public:
 	std::vector<std::string> getBaseFunctionNames(RuleBaseFacilityFunctions f) const;
 	/// Get base functions rule based on function name.
 	RuleBaseFacilityFunctions getBaseFunctionsRule(const std::string &name) const;
-
 	/// Loads a list of ints.
 	void loadInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node) const;
 	/// Loads a list of ints where order of items does not matter.

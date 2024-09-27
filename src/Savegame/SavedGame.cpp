@@ -2336,7 +2336,6 @@ bool SavedGame::isBaseFunctionEnabled(const std::string &baseFunctionType, const
 	}
 	return false;
 }
-
 /**
  * Returns if a certain soldier type has been hired in any base.
  * @param soldierType soldier type ID.
