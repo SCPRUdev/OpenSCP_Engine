@@ -34,6 +34,7 @@
 #include "RuleAlienMission.h"
 #include "RuleBaseFacilityFunctions.h"
 #include "RuleItem.h"
+#include "RuleStartingBaseSet.h"
 
 namespace OpenXcom
 {
@@ -104,6 +105,7 @@ class ModScriptGlobal;
 class ScriptParserBase;
 class ScriptGlobal;
 struct StatAdjustment;
+struct RuleStartingBaseSet;
 
 enum GameDifficulty : int;
 
@@ -204,6 +206,7 @@ private:
 	std::map<std::string, RuleMissionScript*> _missionScripts;
 	std::map<std::string, std::vector<ExtraSprites *> > _extraSprites;
 	std::map<std::string, CustomPalettes *> _customPalettes;
+	std::map<std::string, RuleStartingBaseSet *> _startingBaseSets;
 	std::vector<std::pair<std::string, ExtraSounds *> > _extraSounds;
 	std::map<std::string, ExtraStrings *> _extraStrings;
 	std::vector<StatString*> _statStrings;
@@ -243,7 +246,7 @@ private:
 	int _ufoGlancingHitThreshold, _ufoBeamWidthParameter;
 	int _ufoTractorBeamSizeModifiers[5];
 	int _escortRange, _drawEnemyRadarCircles;
-	bool _escortsJoinFightAgainstHK, _hunterKillerFastRetarget;
+	bool _escortsJoinFightAgainstHK, _hunterKillerFastRetarget, _craftAllowClassChange;
 	int _crewEmergencyEvacuationSurvivalChance, _pilotsEmergencyEvacuationSurvivalChance;
 	std::array<int, (size_t)(RANK_COMMANDER + 1)> _soldiersPerRank;
 	int _pilotAccuracyZeroPoint, _pilotAccuracyRange, _pilotReactionsZeroPoint, _pilotReactionsRange;
@@ -274,7 +277,7 @@ private:
 	GameTime _startingTime;
 	int _startingDifficulty;
 	int _baseDefenseMapFromLocation;
-	std::map<int, std::string> _missionRatings, _monthlyRatings;
+	std::map<int, std::string> _missionRatings, _monthlyRatings, _craftSizeClassMap;
 	std::map<std::string, std::string> _fixedUserOptions, _recommendedUserOptions;
 	std::vector<std::string> _hiddenMovementBackgrounds;
 	std::vector<std::string> _baseNamesFirst, _baseNamesMiddle, _baseNamesLast;
@@ -286,6 +289,7 @@ private:
 	std::vector<int> _flagByKills;
 	int _pediaReplaceCraftFuelWithRangeType;
 	std::vector<StatAdjustment> _statAdjustment;
+	RuleStartingBaseSet _defaultStartingBaseSet;
 
 	// overrides for DIFFICULTY_COEFFICIENT[]
 	std::vector<int> _monthlyRatingThresholds;
@@ -300,6 +304,7 @@ private:
 	std::vector<std::string> _aliensIndex, _enviroEffectsIndex, _startingConditionsIndex, _deploymentsIndex, _armorsIndex, _ufopaediaIndex, _ufopaediaCatIndex, _researchIndex, _manufactureIndex;
 	std::vector<std::string> _skillsIndex, _soldiersIndex, _soldierTransformationIndex, _soldierBonusIndex;
 	std::vector<std::string> _alienMissionsIndex, _terrainIndex, _customPalettesIndex, _arcScriptIndex, _eventScriptIndex, _eventIndex, _missionScriptIndex;
+	std::vector<std::string> _startingBaseSetsIndex;
 	std::vector<std::vector<int> > _alienItemLevels;
 	std::vector<std::array<SDL_Color, TransparenciesOpacityLevels>> _transparencies;
 	int _facilityListOrder, _craftListOrder, _itemCategoryListOrder, _itemListOrder, _armorListOrder, _alienRaceListOrder, _researchListOrder,  _manufactureListOrder;
@@ -423,6 +428,17 @@ public:
 	static int DIFFICULTY_BASED_RETAL_DELAY[5];
 	static int UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
 	static int PEDIA_FACILITY_RENDER_PARAMETERS[4];
+	static int ACCELERATION_PENALTY[4];
+	static std::pair<int, int> ACCELERATION_COEFF[4];
+	static bool CRAFT_LIST_SHOW_CLASS;
+	static bool CRAFT_LIST_CLASS_SHORT;
+	static bool BASE_SHORT_HANGAR_LINKS;
+	static bool PEDIA_FACILITY_LOCKED_STATS;
+	static int PEDIA_FACILITY_ROWS_CUTOFF;
+	static int PEDIA_FACILITY_COL_OFFSET;
+	static bool GEO_SHOW_TARGET_COURSE_RANGE;
+	static double GEO_TARGET_COURSE_RANGE_MULT;
+	static int GEO_TARGET_RANGE_COL_OFFSET;
 	static bool EXTENDED_ITEM_RELOAD_COST;
 	static bool EXTENDED_INVENTORY_SLOT_SORTING;
 	static bool EXTENDED_RUNNING_COST;
@@ -555,6 +571,8 @@ public:
 	void loadBaseFunction(const std::string &parent, RuleBaseFacilityFunctions& f, const YAML::Node &node);
 	/// Get names of function names in given bitset.
 	std::vector<std::string> getBaseFunctionNames(RuleBaseFacilityFunctions f) const;
+	/// Get base functions rule based on function name.
+	RuleBaseFacilityFunctions getBaseFunctionsRule(const std::string &name) const;
 
 	/// Loads a list of ints.
 	void loadInts(const std::string &parent, std::vector<int>& ints, const YAML::Node &node) const;
@@ -745,6 +763,13 @@ public:
 	AlienDeployment *getDeployment(const std::string &name, bool error = false) const;
 	/// Gets the available alien deployments.
 	const std::vector<std::string> &getDeploymentsList() const;
+
+	/// Gets the ruleset for a default starting base.
+	const RuleStartingBaseSet *getDefaultStartingBaseSet() const;
+	/// Gets the ruleset for a starting base set name.
+	const RuleStartingBaseSet *getStartingBaseSet(const std::string &id, bool error = false) const;
+	/// Gets the available starting base sets.
+	const std::vector<std::string> &getStartingBaseSetsList() const;
 
 	/// Gets armor rules.
 	Armor *getArmor(const std::string &name, bool error = false) const;
@@ -1034,6 +1059,8 @@ public:
 	/// Gets the player starting base.
 	const YAML::Node &getDefaultStartingBase() const;
 	const YAML::Node &getStartingBase(GameDifficulty diff) const;
+	/// Overrides the player starting base from set.
+	void setStartingBase(const RuleStartingBaseSet* baseSet, bool cleanSet = true);
 	/// Gets the game starting time.
 	const GameTime &getStartingTime() const;
 	/// Gets the game starting difficulty.
@@ -1121,6 +1148,13 @@ public:
 	const std::vector<int>& getRetaliationTriggerOdds() { return _retaliationTriggerOdds; }
 	const std::vector<int>& getRetaliationBaseRegionOdds() { return _retaliationBaseRegionOdds; }
 	const std::vector<int>& getAliensFacingCraftOdds() { return _aliensFacingCraftOdds; }
+
+	/// Gets the list of all defined craft classes.
+	const std::map<int, std::string> *getCraftSizeClassMap() const;
+	/// Receives craft size as integer and returns relevant craft class string.
+	const std::string getCraftClassFromSize(const int& craftSize) const;
+	/// Crafts can change their class due to change in their size (through systems/weapons)?
+	bool getCraftAllowClassChange() const { return _craftAllowClassChange; }
 
 };
 

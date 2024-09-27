@@ -112,6 +112,7 @@ void createOptionsOXC()
 	_info.push_back(OptionInfo(OPTION_OXC, "maxFrameSkip", &maxFrameSkip, 0));
 #endif
 	_info.push_back(OptionInfo(OPTION_OXC, "traceAI", &traceAI, false));
+	_info.push_back(OptionInfo(OPTION_OXC, "debugLogging", &debugLogging, false));
 	_info.push_back(OptionInfo(OPTION_OXC, "verboseLogging", &verboseLogging, false));
 	_info.push_back(OptionInfo(OPTION_OXC, "StereoSound", &StereoSound, true));
 	//_info.push_back(OptionInfo(OPTION_OXC, "baseXResolution", &baseXResolution, Screen::ORIGINAL_WIDTH));
@@ -537,6 +538,18 @@ void createOptionsOTHER()
 void createAdvancedOptionsOTHER()
 {
 	// your fork's advanced options here
+	
+	// Enable/disable trigger for starting base selection interface.
+	_info.push_back(OptionInfo(OPTION_OTHER, "oxceStartingBaseSelection", &oxceStartingBaseSelection, false, "STR_SHOW_BASE_SELECTION", "STR_GENERAL"));
+
+	// Game Data Viewer enable/disable trigger.
+	_info.push_back(OptionInfo(OPTION_OTHER, "oxceShowAdvancedDebugOptions", &oxceShowAdvancedDebugOptions, false, "STR_SHOW_ADVANCED_DEBUG", "STR_GENERAL"));
+
+	// Game Data Viewer dedicated settings. Require 'debug: true' option to show all the data.
+	_info.push_back(OptionInfo(OPTION_OTHER, "oxceTechTreeDataView", &oxceTechTreeDataView, false, "STR_GAME_DATA_VIEWER_OPTION", "STR_ADV_DEBUG"));
+	_info.push_back(OptionInfo(OPTION_OTHER, "oxceDataViewStringTrunc", &oxceDataViewStringTrunc, 0, "STR_DATA_VIEWER_STRING_TRUNC", "STR_ADV_DEBUG"));
+	_info.push_back(OptionInfo(OPTION_OTHER, "oxceDataViewCleanReplace", &oxceDataViewCleanReplace, true, "STR_DATA_VIEWER_CLEAN_REPLACE", "STR_ADV_DEBUG"));
+	_info.push_back(OptionInfo(OPTION_OTHER, "oxceDataViewStrTranslate", &oxceDataViewStrTranslate, false, "STR_DATA_VIEWER_TRANSLATE", "STR_ADV_DEBUG"));
 }
 
 void createControlsOTHER()
@@ -803,6 +816,8 @@ bool init()
 	Logger::reportingLevel() = LOG_INFO;
 #endif
 
+	if (Options::debugLogging)
+		Logger::reportingLevel() = LOG_DEBUG;
 	if (Options::verboseLogging)
 		Logger::reportingLevel() = LOG_VERBOSE;
 
