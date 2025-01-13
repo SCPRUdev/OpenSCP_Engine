@@ -55,6 +55,7 @@ namespace OpenXcom
 	 */
 	void ArticleDefinition::load(const YAML::YamlNodeReader& reader, int listOrder)
 	{
+
 		reader.tryRead("id", id);
 		_pages[0].title = id;
 		reader.tryRead("section", section);

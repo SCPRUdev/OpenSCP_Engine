@@ -94,6 +94,7 @@ void RuleBaseFacility::load(const YAML::YamlNodeReader& node, Mod *mod)
 		reader.tryRead("size", _sizeX);
 		reader.tryRead("size", _sizeY);
 	}
+
 	reader.tryRead("sizeX", _sizeX);
 	reader.tryRead("sizeY", _sizeY);
 	reader.tryRead("buildCost", _buildCost);
@@ -141,6 +142,7 @@ void RuleBaseFacility::load(const YAML::YamlNodeReader& node, Mod *mod)
 	reader.tryRead("rightClickActionType", _rightClickActionType);
 
 	if (const auto& items = reader["buildCostItems"])
+
 	{
 		for (const auto& buildCostReader : items.children())
 		{

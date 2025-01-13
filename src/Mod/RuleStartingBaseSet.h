@@ -51,6 +51,7 @@ struct RuleStartingBaseSet
 
 	/// Loads item data from YAML.
 	void load(const YAML::YamlNodeReader& node);
+
 	/// Cross link with other rules.
 	void afterLoad(const Mod* mod);
 };

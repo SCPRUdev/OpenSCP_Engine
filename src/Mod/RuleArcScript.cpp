@@ -57,6 +57,7 @@ void RuleArcScript::load(const YAML::YamlNodeReader& node)
 	{
 		_randomArcs.load(reader["randomArcs"]);
 	}
+
 	reader.tryRead("firstMonth", _firstMonth);
 	reader.tryRead("lastMonth", _lastMonth);
 	reader.tryRead("executionOdds", _executionOdds);
@@ -77,6 +78,7 @@ void RuleArcScript::load(const YAML::YamlNodeReader& node)
 	reader.tryRead("baseFunctionTriggers", _baseFunctionTriggers);
 	reader.tryRead("xcomBaseInRegionTriggers", _xcomBaseInRegionTriggers);
 	reader.tryRead("xcomBaseInCountryTriggers", _xcomBaseInCountryTriggers);
+
 }
 
 }

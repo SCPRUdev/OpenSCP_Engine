@@ -2418,6 +2418,7 @@ void Mod::loadAll()
 
 	// create default starting base set from pre-defined starting base rules
 	{
+
 		_defaultStartingBaseSet.BaseDefault.yaml = _startingBaseDefault.yaml;
 
 		if (!_startingBaseBeginner.yaml.empty())
@@ -2675,6 +2676,7 @@ void Mod::loadResourceConfigFile(const FileMap::FileRecord &filerec)
 /**
  * Loads "constants" node.
  */
+
 void Mod::loadConstants(const YAML::YamlNodeReader &reader)
 {
 	loadSoundOffset("constants", DOOR_OPEN, reader["doorSound"], "BATTLE.CAT");
@@ -3025,6 +3027,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		if (rule != 0)
 		{
 			rule->load(ruleReader);
+		}
+	}
+	for (YAML::const_iterator i : iterateRules("startingBaseSets", "name"))
+	{
+		RuleStartingBaseSet *rule = loadRule(*i, &_startingBaseSets, &_startingBaseSetsIndex, "name");
+		if (rule != 0)
+		{
+			rule->load(*i);
 		}
 	}
 
@@ -3592,6 +3602,13 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	{
 		craftClasses.tryRead("sizeClassMap", _craftSizeClassMap);
 		craftClasses.tryRead("allowClassChange", _craftAllowClassChange);
+	}
+
+	// craft classification variables
+	if (const YAML::Node &craftClasses = loadDocInfoHelper("craftClasses"))
+	{
+		_craftSizeClassMap = craftClasses["sizeClassMap"].as<std::map<int, std::string>>(_craftSizeClassMap);
+		_craftAllowClassChange = craftClasses["allowClassChange"].as<bool>(_craftAllowClassChange);
 	}
 }
 
@@ -4830,6 +4847,7 @@ void Mod::setStartingBase(const RuleStartingBaseSet* baseSet, bool cleanSet)
 {
 	if (cleanSet)
 	{
+
 		_startingBaseDefault.yaml.clear();
 		_startingBaseBeginner.yaml.clear();
 		_startingBaseExperienced.yaml.clear();

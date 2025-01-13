@@ -28,9 +28,11 @@ namespace OpenXcom
  * @param unique name of the starting base set.
  */
 RuleStartingBaseSet::RuleStartingBaseSet(const std::string &name) : Name(name),
+
 	BaseDefault(YAML::YamlString()), BaseBeginner(YAML::YamlString()),
 	BaseExperienced(YAML::YamlString()), BaseVeteran(YAML::YamlString()),
 	BaseGenius(YAML::YamlString()), BaseSuperhuman(YAML::YamlString())
+
 {
 
 }
@@ -39,13 +41,16 @@ RuleStartingBaseSet::RuleStartingBaseSet(const std::string &name) : Name(name),
  * Loads item data from YAML.
  * @param node Node with data.
  */
+
 void RuleStartingBaseSet::load(const YAML::YamlNodeReader& node)
 {
 	const auto& reader = node.useIndex();
 	if (const auto& parent = reader["refNode"])
+
 	{
 		load(parent);
 	}
+
 
 	auto loadStartingSetBase = [&](const YAML::YamlNodeReader &srcRef, YAML::YamlString &destRef)
 	{
@@ -63,6 +68,7 @@ void RuleStartingBaseSet::load(const YAML::YamlNodeReader& node)
 	loadStartingSetBase(node["baseSuperhuman"], BaseSuperhuman);
 
 	// Empty data not allowed, since constructor has no default layouts
+
 	if (BaseDefault.yaml.empty() && BaseBeginner.yaml.empty() &&
 		BaseExperienced.yaml.empty() && BaseVeteran.yaml.empty() &&
 		BaseGenius.yaml.empty() && BaseSuperhuman.yaml.empty())
@@ -77,6 +83,7 @@ void RuleStartingBaseSet::load(const YAML::YamlNodeReader& node)
 void RuleStartingBaseSet::afterLoad(const Mod* mod)
 {
 	// Always assign fallback layout from first existing layout
+
 	if (BaseDefault.yaml.empty() && !BaseBeginner.yaml.empty())
 		BaseDefault.yaml = BaseBeginner.yaml;
 	else if (BaseDefault.yaml.empty() && !BaseExperienced.yaml.empty())
@@ -87,6 +94,7 @@ void RuleStartingBaseSet::afterLoad(const Mod* mod)
 		BaseDefault.yaml = BaseGenius.yaml;
 	else if (BaseDefault.yaml.empty() && !BaseSuperhuman.yaml.empty())
 		BaseDefault.yaml = BaseSuperhuman.yaml;
+
 }
 
 } //namespace OpenXcom

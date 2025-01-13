@@ -37,9 +37,11 @@ enum BasePlacementErrors : int;
 struct CraftOption
 {
 	/// Horizontal offset for rendering craft in the facility.
+
 	int x = 2;
 	/// Vertical offset for rendering craft in the facility.
 	int y = -4;
+
 	/// Minimum size of craft that can be housed in the slot.
 	int min = 0;
 	/// Maximum size of craft that can be housed in the slot.
@@ -47,6 +49,7 @@ struct CraftOption
 	/// Is craft hidden or rendered in the base in the slot.
 	bool hide = false;
 	/// Constructor with default parameters. Needed for YAML.
+
 	CraftOption() = default;
 	/// Constructor that allows to define facility craft slots.
 	CraftOption(int xOffset, int yOffset, int minSize, int maxSize, bool isHidden)
@@ -56,6 +59,7 @@ struct CraftOption
 		min = minSize;
 		max = maxSize;
 		hide = isHidden;
+
 	}
 };
 
@@ -263,4 +267,38 @@ public:
 // helper overloads for deserialization-only
 bool read(ryml::ConstNodeRef const& n, CraftOption* val);
 
+}
+
+namespace YAML
+{
+	template<>
+	struct convert<OpenXcom::CraftOption>
+	{
+		static Node encode(const OpenXcom::CraftOption& crOpt)
+		{
+			Node node;
+			node.SetStyle(EmitterStyle::Flow);
+			node["x"] = crOpt.x;
+			node["y"] = crOpt.y;
+			node["min"] = crOpt.min;
+			node["max"] = crOpt.max;
+			node["hide"] = crOpt.hide;
+			return node;
+		}
+
+		static bool decode(const Node& node, OpenXcom::CraftOption& crOpt)
+		{
+			if (!node.IsMap())
+				return false;
+
+			crOpt.x = node["x"].as<int>(2);
+			crOpt.y = node["y"].as<int>(-4);
+			crOpt.min = node["min"].as<int>(0);
+			crOpt.max = node["max"].as<int>(0);
+			crOpt.hide = node["hide"].as<bool>(false);
+
+			if (crOpt.min > crOpt.max) return false;
+			return true;
+		}
+	};
 }

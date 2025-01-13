@@ -118,6 +118,7 @@ struct RuleCraftStats
 	/// Loads stats from YAML.
 	void load(const YAML::YamlNodeReader& reader)
 	{
+
 		//const auto& reader = r.useIndex();
 		reader.tryRead("craftSize", craftSize);
 		reader.tryRead("fuelMax", fuelMax);

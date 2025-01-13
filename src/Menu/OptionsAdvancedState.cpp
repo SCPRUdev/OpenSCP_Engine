@@ -92,6 +92,8 @@ OptionsAdvancedState::OptionsAdvancedState(OptionsOrigin origin) : OptionsBaseSt
 	_btnOTHER->setGroup(&_owner);
 	_btnOTHER->onMousePress((ActionHandler)&OptionsAdvancedState::btnGroupPress, SDL_BUTTON_LEFT);
 
+
+
 	// how much room do we need for YES/NO
 	Text text = Text(100, 9, 0, 0);
 	text.initText(_game->getMod()->getFont("FONT_BIG"), _game->getMod()->getFont("FONT_SMALL"), _game->getLanguage());

@@ -246,7 +246,7 @@ BattlescapeState::BattlescapeState() :
 		_barMana = new Bar(102, 3, x + 170, y + 41 + step*4);
 	}
 
-	_txtDebug = new Text(300, 10, 20, 0);
+	_txtDebug = new Text(400, 30, 20, 0);
 	_txtTooltip = new Text(300, 10, x + 2, y - 10);
 
 	// Palette transformations
@@ -2828,7 +2828,7 @@ inline void BattlescapeState::handle(Action *action)
 						_map->getSelectorPosition(&newPos);
 						if (_save->getTileEngine()->isPositionValidForUnit(newPos, unit))
 						{
-							debug("Beam me up Scotty");
+							debug(tr("STR_DEBUG_TELEPORT_UNIT"));
 							_save->getPathfinding()->removePreview();
 
 							unit->setTile(_save->getTile(newPos), _save);
@@ -2848,12 +2848,12 @@ inline void BattlescapeState::handle(Action *action)
 					if (key == SDLK_d && ctrlPressed)
 					{
 						_save->setDebugMode();
-						debug("Debug Mode");
+						debug(tr("STR_DEBUGMODE"));
 					}
 					// "ctrl-v" - reset tile visibility
 					else if (_save->getDebugMode() && key == SDLK_v && ctrlPressed)
 					{
-						debug("Resetting tile visibility");
+						debug(tr("STR_DEBUG_SHOWMAP"));
 						_save->resetTiles();
 					}
 					else if (_save->getDebugMode() && (key == SDLK_k || key == SDLK_j) && ctrlPressed)
@@ -2875,7 +2875,7 @@ inline void BattlescapeState::handle(Action *action)
 							// kill (ctrl-shift-k) or stun (ctrl-shift-j) just a single unit (under the cursor)
 							if (unitUnderTheCursor && !unitUnderTheCursor->isOut())
 							{
-								debug("Bingo!");
+								debug(tr("STR_DEBUG_STUN_KILL_ONE"));
 								unitUnderTheCursor->damage(Position(0, 0, 0), 1000, _game->getMod()->getDamageType(stunOnly ? DT_STUN : DT_MELEE), _save, {});
 							}
 						}
@@ -2884,12 +2884,12 @@ inline void BattlescapeState::handle(Action *action)
 							if (stunOnly)
 							{
 								// "ctrl-j" - stun all aliens
-								debug("Deploying Celine Dion album");
+								debug(tr("STR_DEBUG_STUNALL"));
 							}
 							else
 							{
 								// "ctrl-k" - kill all aliens
-								debug("Influenza bacterium dispersed");
+								debug(tr("STR_DEBUG_KILLALL"));
 							}
 							for (auto* bu : *_save->getUnits())
 							{
