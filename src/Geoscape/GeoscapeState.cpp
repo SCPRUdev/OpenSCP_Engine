@@ -532,6 +532,24 @@ void GeoscapeState::handle(Action *action)
 
 	if (action->getDetails()->type == SDL_KEYDOWN)
 	{
+		if (!_dogfights.empty() && _dogfights.size() > _minimizedDogfights)
+		{
+			if (action->getDetails()->key.keysym.sym == SDLK_1)
+			{
+				Options::dogfightSpeed = 50;
+				_dogfightTimer->setInterval(Options::dogfightSpeed);
+			}
+			else if (action->getDetails()->key.keysym.sym == SDLK_2)
+			{
+				Options::dogfightSpeed = 35;
+				_dogfightTimer->setInterval(Options::dogfightSpeed);
+			}
+			else if (action->getDetails()->key.keysym.sym == SDLK_3)
+			{
+				Options::dogfightSpeed = 20;
+				_dogfightTimer->setInterval(Options::dogfightSpeed);
+			}
+		}
 		// "ctrl-d" - enable debug mode
 		if (Options::debug && action->getDetails()->key.keysym.sym == SDLK_d && _game->isCtrlPressed())
 		{
@@ -2420,6 +2438,14 @@ void GeoscapeState::time1Day()
 		if (!finished.empty())
 		{
 			saveGame->getAvailableResearchProjects(before, mod, xbase);
+			for (auto* fp : finished)
+			{
+				if (fp->getRules()->isRepeatable())
+				{
+					RuleResearch* nonconst = mod->getResearch(fp->getRules()->getName());
+					before.push_back(nonconst);
+				}
+			}
 		}
 		// 3. add finished research, including lookups and getonefrees (up to 4x)
 		std::vector<const RuleResearch*> topicsToCheck;
@@ -3784,6 +3810,17 @@ void GeoscapeState::determineAlienMissions()
 				}
 				if (triggerHappy)
 				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : arcScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+							_game->getMod()) == triggerBaseFunc.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				if (triggerHappy)
+				{
 					// xcom base requirements
 					for (auto& triggerXcomBase : arcScript->getXcomBaseInRegionTriggers())
 					{
@@ -3989,6 +4026,17 @@ void GeoscapeState::determineAlienMissions()
 			}
 			if (triggerHappy)
 			{
+				// base functions requirements
+				for (auto& triggerBaseFunc : command->getBaseFunctionTriggers())
+				{
+					triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+						_game->getMod()) == triggerBaseFunc.second);
+					if (!triggerHappy)
+						break;
+				}
+			}
+			if (triggerHappy)
+			{
 				// xcom base requirements
 				for (auto& triggerXcomBase : command->getXcomBaseInRegionTriggers())
 				{
@@ -4158,6 +4206,17 @@ void GeoscapeState::determineAlienMissions()
 					for (auto& triggerBaseFunc : eventScript->getBaseFunctionTriggers())
 					{
 						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,	_game->getMod()) == triggerBaseFunc.second);
+						if (!triggerHappy)
+							break;
+					}
+				}
+				if (triggerHappy)
+				{
+					// base functions requirements
+					for (auto& triggerBaseFunc : eventScript->getBaseFunctionTriggers())
+					{
+						triggerHappy = (save->isBaseFunctionEnabled(triggerBaseFunc.first,
+							_game->getMod()) == triggerBaseFunc.second);
 						if (!triggerHappy)
 							break;
 					}

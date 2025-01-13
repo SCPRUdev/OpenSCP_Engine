@@ -19,7 +19,7 @@
  */
 #include <string>
 #include <vector>
-#include <yaml-cpp/yaml.h>
+#include "../Engine/Yaml.h"
 #include "RuleBaseFacilityFunctions.h"
 #include "ModScript.h"
 
@@ -57,6 +57,7 @@ class RuleResearch
 	std::string _neededItemName;
 	const RuleItem* _neededItem = nullptr;
 	bool _needItem, _destroyItem, _unlockFinalMission;
+	bool _repeatable;
 	int _listOrder;
 
 	ScriptValues<RuleResearch> _scriptValues;
@@ -73,7 +74,7 @@ public:
 	RuleResearch(const std::string &name, int listOrder);
 
 	/// Loads the research from YAML.
-	void load(const YAML::Node& node, Mod* mod, const ModScript& parsers);
+	void load(const YAML::YamlNodeReader& reader, Mod* mod, const ModScript& parsers);
 	/// Cross link with other rules.
 	void afterLoad(const Mod* mod);
 
@@ -93,6 +94,8 @@ public:
 	bool destroyItem() const;
 	/// Check if this ResearchProject is unlocking final mission, it can be only one!
 	bool unlockFinalMission() const { return _unlockFinalMission; }
+	/// Check if this ResearchProject is repeatable, i.e. is never marked as discovered.
+	bool isRepeatable() const { return _repeatable; }
 	/// Gets the list of ResearchProjects unlocked by this research.
 	const std::vector<const RuleResearch*> &getUnlocked() const;
 	/// Gets the list of ResearchProjects disabled by this research.

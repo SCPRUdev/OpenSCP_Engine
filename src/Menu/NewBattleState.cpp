@@ -19,7 +19,7 @@
 #include "NewBattleState.h"
 #include <cmath>
 #include <algorithm>
-#include <yaml-cpp/yaml.h>
+#include "../Engine/Yaml.h"
 #include "../Engine/Game.h"
 #include "../Mod/Mod.h"
 #include "../Mod/RuleItem.h"
@@ -71,14 +71,14 @@ NewBattleState::NewBattleState() :
 	// Create objects
 	_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
 	_btnQuickSearch = new TextEdit(this, 48, 9, 264, 183);
-	_txtTitle = new Text(320, 17, 0, 9);
+	_txtTitle = new Text(304, 17, 8, 9);
 
 	_txtMapOptions = new Text(148, 9, 8, 68);
 	_frameLeft = new Frame(148, 96, 8, 78);
 	_txtAlienOptions = new Text(148, 9, 164, 68);
 	_frameRight = new Frame(148, 96, 164, 78);
 
-	_btnUfoCrashed = new ToggleTextButton(16, 16, 296, 8);
+	_btnUfoLanded = new ToggleTextButton(100, 16, 212, 8);
 
 	_txtMission = new Text(100, 9, 8, 30);
 	_cbxMission = new ComboBox(this, 214, 16, 98, 26);
@@ -129,7 +129,7 @@ NewBattleState::NewBattleState() :
 	add(_txtAlienOptions, "heading", "newBattleMenu");
 	add(_frameRight, "frames", "newBattleMenu");
 
-	add(_btnUfoCrashed, "button1", "newBattleMenu");
+	add(_btnUfoLanded, "button1", "newBattleMenu");
 
 	add(_txtMission, "text", "newBattleMenu");
 	add(_txtCraft, "text", "newBattleMenu");
@@ -181,8 +181,10 @@ NewBattleState::NewBattleState() :
 
 	_frameRight->setThickness(3);
 
-	_btnUfoCrashed->setText("*");
-	_btnUfoCrashed->setVisible(Options::debug);
+	_btnUfoLanded->setText(tr("STR_LANDED"));
+	_btnUfoLanded->setVisible(Options::oxceCrashedOrLanded > 0);
+	_btnUfoLanded->setPressed(Options::oxceCrashedOrLanded > 1);
+	_txtTitle->setAlign(_btnUfoLanded->getVisible() ? ALIGN_LEFT : ALIGN_CENTER);
 
 	_txtMission->setText(tr("STR_MISSION"));
 
@@ -358,7 +360,8 @@ void NewBattleState::handle(Action* action)
 		// F11 - show/hide "UFO crashed" toggle button
 		if (action->getDetails()->key.keysym.sym == SDLK_F11)
 		{
-			_btnUfoCrashed->setVisible(!_btnUfoCrashed->getVisible());
+			_btnUfoLanded->setVisible(!_btnUfoLanded->getVisible());
+			_txtTitle->setAlign(_btnUfoLanded->getVisible() ? ALIGN_LEFT : ALIGN_CENTER);
 		}
 	}
 }
@@ -392,35 +395,32 @@ void NewBattleState::load(const std::string &filename)
 	{
 		try
 		{
-			YAML::Node doc = YAML::Load(*CrossPlatform::readFile(s));
-			_cbxMission->setSelected(std::min(doc["mission"].as<size_t>(0), _missionTypes.size() - 1));
+			YAML::YamlRootNodeReader cfgReader(s);
+			_cbxMission->setSelected(std::min(cfgReader["mission"].readVal<size_t>(0), _missionTypes.size() - 1));
 			cbxMissionChange(0);
-			_cbxCraft->setSelected(std::min(doc["craft"].as<size_t>(0), _crafts.size() - 1));
-			_slrDarkness->setValue(doc["darkness"].as<size_t>(0));
-			_cbxTerrain->setSelected(std::min(doc["terrain"].as<size_t>(0), _terrainTypes.size() - 1));
+			_cbxCraft->setSelected(std::min(cfgReader["craft"].readVal<size_t>(0), _crafts.size() - 1));
+			_slrDarkness->setValue(cfgReader["darkness"].readVal<size_t>(0));
+			_cbxTerrain->setSelected(std::min(cfgReader["terrain"].readVal<size_t>(0), _terrainTypes.size() - 1));
 			cbxTerrainChange(0);
 			{
-				_selectedGlobeTexture = std::min(doc["globeTexture"].as<size_t>(0), _globeTextures.size() - 1);
+				_selectedGlobeTexture = std::min(cfgReader["globeTexture"].readVal<size_t>(0), _globeTextures.size() - 1);
 				_btnGlobeTexture->setText(tr(_globeTextures[_selectedGlobeTexture]));
 			}
-			_cbxAlienRace->setSelected(std::min(doc["alienRace"].as<size_t>(0), _alienRaces.size() - 1));
-			_cbxDifficulty->setSelected(doc["difficulty"].as<size_t>(0));
-			_slrAlienTech->setValue(doc["alienTech"].as<size_t>(0));
+			_cbxAlienRace->setSelected(std::min(cfgReader["alienRace"].readVal<size_t>(0), _alienRaces.size() - 1));
+			_cbxDifficulty->setSelected(cfgReader["difficulty"].readVal<size_t>(0));
+			_slrAlienTech->setValue(cfgReader["alienTech"].readVal<size_t>(0));
 
-			if (doc["base"])
+			if (cfgReader["base"])
 			{
 				const Mod *mod = _game->getMod();
 				SavedGame *save = new SavedGame();
 
 				Base *base = new Base(mod);
-				base->load(doc["base"], save, false);
+				base->load(cfgReader["base"], save, false);
 				save->getBases()->push_back(base);
 
 				// Add research
-				for (auto& pair : mod->getResearchMap())
-				{
-					save->addFinishedResearchSimple(pair.second);
-				}
+				save->makeAllResearchDiscovered(mod);
 
 				// Generate items
 				base->getStorageItems()->clear();
@@ -460,12 +460,12 @@ void NewBattleState::load(const std::string &filename)
 		}
 	}
 
-	const YAML::Node& starter = _game->getMod()->getDefaultStartingBase();
-	if (const YAML::Node& globalTemplates = starter["globalTemplates"])
+	YAML::YamlRootNodeReader starterBaseReader(_game->getMod()->getDefaultStartingBase(), "(starting base template)");
+	if (const auto& globalTemplates = starterBaseReader["globalTemplates"])
 	{
 		_game->getSavedGame()->loadTemplates(globalTemplates, _game->getMod());
 	}
-	if (const YAML::Node& ufopediaRuleStatus = starter["ufopediaRuleStatus"])
+	if (const auto& ufopediaRuleStatus = starterBaseReader["ufopediaRuleStatus"])
 	{
 		_game->getSavedGame()->loadUfopediaRuleStatus(ufopediaRuleStatus);
 	}
@@ -478,21 +478,20 @@ void NewBattleState::load(const std::string &filename)
  */
 void NewBattleState::save(const std::string &filename)
 {
-	YAML::Emitter out;
-	YAML::Node node;
-	node["mission"] = _cbxMission->getSelected();
-	node["craft"] = _cbxCraft->getSelected();
-	node["darkness"] = _slrDarkness->getValue();
-	node["terrain"] = _cbxTerrain->getSelected();
-	node["globeTexture"] = _selectedGlobeTexture;
-	node["alienRace"] = _cbxAlienRace->getSelected();
-	node["difficulty"] = _cbxDifficulty->getSelected();
-	node["alienTech"] = _slrAlienTech->getValue();
-	node["base"] = _game->getSavedGame()->getBases()->front()->save();
-	out << node;
+	YAML::YamlRootNodeWriter writer;
+	writer.setAsMap();
+	writer.write("mission", _cbxMission->getSelected());
+	writer.write("craft", _cbxCraft->getSelected());
+	writer.write("darkness", _slrDarkness->getValue());
+	writer.write("terrain", _cbxTerrain->getSelected());
+	writer.write("globeTexture", _selectedGlobeTexture);
+	writer.write("alienRace", _cbxAlienRace->getSelected());
+	writer.write("difficulty", _cbxDifficulty->getSelected());
+	writer.write("alienTech", _slrAlienTech->getValue());
+	_game->getSavedGame()->getBases()->front()->save(writer["base"]);
 
 	std::string filepath = Options::getMasterUserFolder() + filename + ".cfg";
-	if (!CrossPlatform::writeFile(filepath, out.c_str()))
+	if (!CrossPlatform::writeFile(filepath, writer.emit().yaml))
 	{
 		Log(LOG_WARNING) << "Failed to save " << filepath;
 		return;
@@ -508,8 +507,8 @@ void NewBattleState::initSave()
 	const Mod *mod = _game->getMod();
 	SavedGame *save = new SavedGame();
 	Base *base = new Base(mod);
-	const YAML::Node &starter = _game->getMod()->getDefaultStartingBase();
-	base->load(starter, save, true, true);
+	YAML::YamlRootNodeReader startingBaseReader(_game->getMod()->getDefaultStartingBase(), "(starting base template)");
+	base->load(startingBaseReader, save, true, true);
 	save->getBases()->push_back(base);
 
 	// Kill everything we don't want in this base
@@ -589,10 +588,7 @@ void NewBattleState::initSave()
 	}
 
 	// Add research
-	for (auto& pair : mod->getResearchMap())
-	{
-		save->addFinishedResearchSimple(pair.second);
-	}
+	save->makeAllResearchDiscovered(mod);
 
 	_game->setSavedGame(save);
 	cbxMissionChange(0);
@@ -655,7 +651,7 @@ void NewBattleState::btnOkClick(Action *)
 		_craft->setDestination(u);
 		bgen.setUfo(u);
 		// either ground assault or ufo crash
-		bool ufoLanded = _btnUfoCrashed->getVisible() ? !_btnUfoCrashed->getPressed() : RNG::generate(0, 1) == 1;
+		bool ufoLanded = _btnUfoLanded->getVisible() ? _btnUfoLanded->getPressed() : RNG::generate(0, 1) == 1;
 		if (ufoLanded)
 		{
 			u->setStatus(Ufo::LANDED);
@@ -918,6 +914,10 @@ void NewBattleState::cbxTerrainChange(Action *)
 		}
 	}
 	_cbxAlienRace->setOptions(_alienRaces, true);
+	if (_cbxAlienRace->getSelected() >= _alienRaces.size())
+	{
+		_cbxAlienRace->setSelected(0);
+	}
 }
 
 /**
@@ -986,6 +986,7 @@ void NewBattleState::fillList(NewBattleSelectType selectType, bool isRightClick)
 		_btnCancel->setVisible(true);
 		_btnRandom->setVisible(false);
 		_lstSelect->setVisible(true);
+		_btnQuickSearch->setVisible(Options::oxceQuickSearchButton);
 	}
 
 	std::string searchString = _btnQuickSearch->getText();

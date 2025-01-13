@@ -28,8 +28,11 @@ namespace OpenXcom
  * @param unique name of the starting base set.
  */
 RuleStartingBaseSet::RuleStartingBaseSet(const std::string &name) : Name(name),
-	BaseDefault(YAML::Node()), BaseBeginner(YAML::Node()), BaseExperienced(YAML::Node()),
-	BaseVeteran(YAML::Node()), BaseGenius(YAML::Node()), BaseSuperhuman(YAML::Node())
+
+	BaseDefault(YAML::YamlString()), BaseBeginner(YAML::YamlString()),
+	BaseExperienced(YAML::YamlString()), BaseVeteran(YAML::YamlString()),
+	BaseGenius(YAML::YamlString()), BaseSuperhuman(YAML::YamlString())
+
 {
 
 }
@@ -38,21 +41,22 @@ RuleStartingBaseSet::RuleStartingBaseSet(const std::string &name) : Name(name),
  * Loads item data from YAML.
  * @param node Node with data.
  */
-void RuleStartingBaseSet::load(const YAML::Node& node)
+
+void RuleStartingBaseSet::load(const YAML::YamlNodeReader& node)
 {
-	if (const YAML::Node &parent = node["refNode"])
+	const auto& reader = node.useIndex();
+	if (const auto& parent = reader["refNode"])
+
 	{
 		load(parent);
 	}
 
-	auto loadStartingSetBase = [&](const YAML::Node &srcRef, YAML::Node &destRef)
+
+	auto loadStartingSetBase = [&](const YAML::YamlNodeReader &srcRef, YAML::YamlString &destRef)
 	{
-		if (srcRef && srcRef.IsMap())
+		if (srcRef && srcRef.isMap())
 		{
-			for (YAML::const_iterator i = srcRef.begin(); i != srcRef.end(); ++i)
-			{
-				destRef[i->first.as<std::string>()] = YAML::Node(i->second);
-			}
+			destRef = srcRef.emitDescendants();
 		}
 	};
 
@@ -64,8 +68,10 @@ void RuleStartingBaseSet::load(const YAML::Node& node)
 	loadStartingSetBase(node["baseSuperhuman"], BaseSuperhuman);
 
 	// Empty data not allowed, since constructor has no default layouts
-	if (BaseDefault.IsNull() && BaseBeginner.IsNull() && BaseExperienced.IsNull() &&
-		BaseVeteran.IsNull() && BaseGenius.IsNull() && BaseSuperhuman.IsNull())
+
+	if (BaseDefault.yaml.empty() && BaseBeginner.yaml.empty() &&
+		BaseExperienced.yaml.empty() && BaseVeteran.yaml.empty() &&
+		BaseGenius.yaml.empty() && BaseSuperhuman.yaml.empty())
 	{
 		throw Exception("Staring base set contains no data!");
 	}
@@ -77,16 +83,18 @@ void RuleStartingBaseSet::load(const YAML::Node& node)
 void RuleStartingBaseSet::afterLoad(const Mod* mod)
 {
 	// Always assign fallback layout from first existing layout
-	if (BaseDefault.IsNull() && !BaseBeginner.IsNull())
-		BaseDefault = YAML::Clone(BaseBeginner);
-	else if (BaseDefault.IsNull() && !BaseExperienced.IsNull())
-		BaseDefault = YAML::Clone(BaseExperienced);
-	else if (BaseDefault.IsNull() && !BaseVeteran.IsNull())
-		BaseDefault = YAML::Clone(BaseVeteran);
-	else if (BaseDefault.IsNull() && !BaseGenius.IsNull())
-		BaseDefault = YAML::Clone(BaseGenius);
-	else if (BaseDefault.IsNull() && !BaseSuperhuman.IsNull())
-		BaseDefault = YAML::Clone(BaseSuperhuman);
+
+	if (BaseDefault.yaml.empty() && !BaseBeginner.yaml.empty())
+		BaseDefault.yaml = BaseBeginner.yaml;
+	else if (BaseDefault.yaml.empty() && !BaseExperienced.yaml.empty())
+		BaseDefault.yaml = BaseExperienced.yaml;
+	else if (BaseDefault.yaml.empty() && !BaseVeteran.yaml.empty())
+		BaseDefault.yaml = BaseVeteran.yaml;
+	else if (BaseDefault.yaml.empty() && !BaseGenius.yaml.empty())
+		BaseDefault.yaml = BaseGenius.yaml;
+	else if (BaseDefault.yaml.empty() && !BaseSuperhuman.yaml.empty())
+		BaseDefault.yaml = BaseSuperhuman.yaml;
+
 }
 
 } //namespace OpenXcom

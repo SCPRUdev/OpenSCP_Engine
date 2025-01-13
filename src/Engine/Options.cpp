@@ -27,7 +27,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
-#include <yaml-cpp/yaml.h>
+#include "../Engine/Yaml.h"
 #include "Exception.h"
 #include "Logger.h"
 #include "CrossPlatform.h"
@@ -148,6 +148,7 @@ void createOptionsOXC()
 	_info.push_back(OptionInfo(OPTION_OXC, "dragScrollPixelTolerance", &dragScrollPixelTolerance, 10)); // count of pixels
 	_info.push_back(OptionInfo(OPTION_OXC, "battleFireSpeed", &battleFireSpeed, 6));
 	_info.push_back(OptionInfo(OPTION_OXC, "battleXcomSpeed", &battleXcomSpeed, 30));
+	battleXcomSpeedOrig = -1;
 	_info.push_back(OptionInfo(OPTION_OXC, "battleAlienSpeed", &battleAlienSpeed, 30));
 #ifdef __MOBILE__
 	_info.push_back(OptionInfo(OPTION_OXC, "battleNewPreviewPath", (int*)&battleNewPreviewPath, PATH_FULL)); // for android, set full preview by default
@@ -367,7 +368,6 @@ void createOptionsOXCE()
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceThumbButtons", &oxceThumbButtons, true));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceThrottleMouseMoveEvent", &oxceThrottleMouseMoveEvent, 0));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceDisableThinkingProgressBar", &oxceDisableThinkingProgressBar, false));
-	_info.push_back(OptionInfo(OPTION_OXCE, "oxceSortDiscoveredVectorByName", &oxceSortDiscoveredVectorByName, false));
 
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceEmbeddedOnly", &oxceEmbeddedOnly, true));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceListVFSContents", &oxceListVFSContents, false));
@@ -422,9 +422,11 @@ void createAdvancedOptionsOXCE()
 #ifdef __MOBILE__
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceLinks", &oxceLinks, true, "STR_OXCE_LINKS", "STR_GENERAL"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceFatFingerLinks", &oxceFatFingerLinks, true, "", "HIDDEN"));
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxceQuickSearchButton", &oxceQuickSearchButton, true, "", "HIDDEN"));
 #else
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceLinks", &oxceLinks, false, "STR_OXCE_LINKS", "STR_GENERAL"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceFatFingerLinks", &oxceFatFingerLinks, false, "", "HIDDEN"));
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxceQuickSearchButton", &oxceQuickSearchButton, false, "", "HIDDEN"));
 #endif
 
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceHighlightNewTopics", &oxceHighlightNewTopics, true, "STR_HIGHLIGHT_NEW", "STR_GENERAL"));
@@ -460,6 +462,7 @@ void createAdvancedOptionsOXCE()
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceAutoSell", &oxceAutoSell, false, "STR_AUTO_SELL", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceAutomaticPromotions", &oxceAutomaticPromotions, true, "STR_AUTOMATICPROMOTIONS", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceEnableOffCentreShooting", &oxceEnableOffCentreShooting, false, "STR_OFF_CENTRE_SHOOTING", "STR_BATTLESCAPE"));
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxceCrashedOrLanded", &oxceCrashedOrLanded, 0, "STR_CRASHED_OR_LANDED", "STR_BATTLESCAPE"));
 }
 
 void createControlsOXCE()
@@ -1109,6 +1112,18 @@ const ModInfo* getActiveMasterInfo()
 	return &_modInfos.at(_masterMod);
 }
 
+/**
+ * Gets the xcom ruleset info.
+ */
+const ModInfo* getXcomRulesetInfo()
+{
+	if (_modInfos.find("xcom1") != _modInfos.end())
+		return &_modInfos.at("xcom1");
+	else if (_modInfos.find("xcom2") != _modInfos.end())
+		return &_modInfos.at("xcom2");
+	else return nullptr;
+}
+
 bool getLoadLastSave()
 {
 	return _loadLastSave && !_loadLastSaveExpended;
@@ -1227,22 +1242,22 @@ bool load(const std::string &filename)
 	std::string s = _configFolder + filename + ".cfg";
 	try
 	{
-		YAML::Node doc = YAML::Load(*CrossPlatform::readFile(s));
+		YAML::YamlRootNodeReader reader(s);
 		// Ignore old options files
-		if (doc["options"]["NewBattleMission"])
+		if (reader["options"]["NewBattleMission"])
 		{
 			return false;
 		}
 		for (auto& optionInfo : _info)
 		{
-			optionInfo.load(doc["options"]);
+			optionInfo.load(reader["options"]);
 		}
 
 		mods.clear();
-		for (YAML::const_iterator i = doc["mods"].begin(); i != doc["mods"].end(); ++i)
+		for (const auto& mod : reader["mods"].children())
 		{
-			std::string id = (*i)["id"].as<std::string>();
-			bool active = (*i)["active"].as<bool>(false);
+			std::string id = mod["id"].readVal<std::string>();
+			bool active = mod["active"].readVal(false);
 			mods.push_back(std::pair<std::string, bool>(id, active));
 		}
 		if (mods.empty())
@@ -1258,52 +1273,6 @@ bool load(const std::string &filename)
 	return true;
 }
 
-void writeNode(const YAML::Node& node, YAML::Emitter& emitter)
-{
-	switch (node.Type())
-	{
-		case YAML::NodeType::Sequence:
-		{
-			emitter << YAML::BeginSeq;
-			for (size_t i = 0; i < node.size(); i++)
-			{
-				writeNode(node[i], emitter);
-			}
-			emitter << YAML::EndSeq;
-			break;
-		}
-		case YAML::NodeType::Map:
-		{
-			emitter << YAML::BeginMap;
-
-			// First collect all the keys
-			std::vector<std::string> keys(node.size());
-			int key_it = 0;
-			for (YAML::const_iterator it = node.begin(); it != node.end(); ++it)
-			{
-				keys[key_it++] = it->first.as<std::string>();
-			}
-
-			// Then sort them
-			std::sort(keys.begin(), keys.end());
-
-			// Then emit all the entries in sorted order.
-			for (size_t i = 0; i < keys.size(); i++)
-			{
-				emitter << YAML::Key;
-				emitter << keys[i];
-				emitter << YAML::Value;
-				writeNode(node[keys[i]], emitter);
-			}
-			emitter << YAML::EndMap;
-			break;
-		}
-		default:
-			emitter << node;
-			break;
-	}
-}
-
 /**
  * Saves options to a YAML file.
  * @param filename YAML filename.
@@ -1311,25 +1280,29 @@ void writeNode(const YAML::Node& node, YAML::Emitter& emitter)
  */
 bool save(const std::string &filename)
 {
-	YAML::Emitter out;
+	std::string yaml;
 	try
 	{
-		YAML::Node doc, node;
-		for (const auto& optionInfo : _info)
-		{
-			optionInfo.save(node);
-		}
-		doc["options"] = node;
-
+		YAML::YamlRootNodeWriter writer;
+		writer.setAsMap();
+		auto modsWriter = writer["mods"];
+		modsWriter.setAsSeq();
 		for (const auto& pair : mods)
 		{
-			YAML::Node mod;
-			mod["id"] = pair.first;
-			mod["active"] = pair.second;
-			doc["mods"].push_back(mod);
+			auto modWriter = modsWriter.write();
+			modWriter.setAsMap();
+			modWriter.write("active", pair.second);
+			modWriter.write("id", pair.first);
 		}
-
-		writeNode(doc, out);
+		auto optionsWriter = writer["options"];
+		optionsWriter.setAsMap();
+		auto sortedInfo = _info;
+		std::sort(sortedInfo.begin(), sortedInfo.end(), [](const OptionInfo& a, const OptionInfo& b) { return a.id() < b.id(); });
+		for (const auto& optionInfo : sortedInfo)
+		{
+			optionInfo.save(optionsWriter);
+		}
+		yaml = writer.emit().yaml;
 	}
 	catch (YAML::Exception &e)
 	{
@@ -1337,9 +1310,7 @@ bool save(const std::string &filename)
 		return false;
 	}
 	std::string filepath = _configFolder + filename + ".cfg";
-	std::string data(out.c_str());
-
-	if (!CrossPlatform::writeFile(filepath, data + "\n" ))
+	if (!CrossPlatform::writeFile(filepath, yaml + "\n"))
 	{
 		Log(LOG_WARNING) << "Failed to save " << filepath;
 		return false;

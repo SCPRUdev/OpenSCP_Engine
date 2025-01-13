@@ -147,7 +147,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 
 	// Set up objects
 	_game->getMod()->getSurface("TAC01.SCR")->blitNShade(_bg, 0, 0);
-	add(_btnArmor, "buttonOK", "inventory", _bg);
+	add(_btnArmor, "buttonArmor", "inventory", _bg);
 
 	add(_soldier);
 	add(_btnQuickSearch, "textItem", "inventory");
@@ -287,7 +287,7 @@ InventoryState::InventoryState(bool tu, BattlescapeState *parent, Base *base, bo
 	_btnQuickSearch->setHighContrast(true);
 	_btnQuickSearch->setText(""); // redraw
 	_btnQuickSearch->onEnter((ActionHandler)&InventoryState::btnQuickSearchApply);
-	_btnQuickSearch->setVisible(false);
+	_btnQuickSearch->setVisible(Options::oxceQuickSearchButton);
 
 	_btnOk->onKeyboardRelease((ActionHandler)&InventoryState::btnQuickSearchToggle, Options::keyToggleQuickSearch);
 
@@ -1798,7 +1798,14 @@ void InventoryState::calculateCurrentDamageTooltip()
 		if (rule->getBattleType() != BT_CORPSE)
 		{
 			int totalDamage = 0;
-			totalDamage += rule->getPowerBonus({ BA_NONE, currentUnit, _currentDamageTooltipItem, damageItem }); //TODO: find what exactly attack we can do
+			if (weaponRule->getIgnoreAmmoPower())
+			{
+				totalDamage += weaponRule->getPowerBonus({ BA_NONE, currentUnit, _currentDamageTooltipItem, damageItem });
+			}
+			else
+			{
+				totalDamage += rule->getPowerBonus({ BA_NONE, currentUnit, _currentDamageTooltipItem, damageItem }); //TODO: find what exactly attack we can do
+			}
 			//totalDamage -= rule->getPowerRangeReduction(distance * 16);
 			if (totalDamage < 0) totalDamage = 0;
 			std::ostringstream ss;

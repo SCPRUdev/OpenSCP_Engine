@@ -18,7 +18,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <string>
-#include <yaml-cpp/yaml.h>
+#include "../Engine/Yaml.h"
 #include "ModScript.h"
 
 namespace OpenXcom
@@ -32,17 +32,17 @@ struct RuleStartingBaseSet
 	/// Base set name. Duplicates will be overwritten.
 	std::string Name;
 	/// Base data that used by default and as fallback.
-	YAML::Node BaseDefault;
+	YAML::YamlString BaseDefault;
 	/// Base data that used on a Beginner difficulty.
-	YAML::Node BaseBeginner;
+	YAML::YamlString BaseBeginner;
 	/// Base data that used on an Experienced difficulty.
-	YAML::Node BaseExperienced;
+	YAML::YamlString BaseExperienced;
 	/// Base data that used on a Veteran difficulty.
-	YAML::Node BaseVeteran;
+	YAML::YamlString BaseVeteran;
 	/// Base data that used on a Genius difficulty.
-	YAML::Node BaseGenius;
+	YAML::YamlString BaseGenius;
 	/// Base data that used on a Superhuman difficulty.
-	YAML::Node BaseSuperhuman;
+	YAML::YamlString BaseSuperhuman;
 
 	/// Default constructor.
 	RuleStartingBaseSet(const std::string &name);
@@ -50,7 +50,8 @@ struct RuleStartingBaseSet
 	~RuleStartingBaseSet() = default;
 
 	/// Loads item data from YAML.
-	void load(const YAML::Node& node);
+	void load(const YAML::YamlNodeReader& node);
+
 	/// Cross link with other rules.
 	void afterLoad(const Mod* mod);
 };
