@@ -94,14 +94,7 @@ namespace OpenXcom
 			const RuleItem *ammo = item->getVehicleClipAmmo();
 
 			std::ostringstream ss8;
-			if (item->getIgnoreAmmoPower())
-			{
-				ss8 << item->getPower();
-			}
-			else
-			{
-				ss8 << ammo->getPower();
-			}
+			ss8 << ammo->getPower();
 			_lstStats2->addRow(2, tr("STR_WEAPON_POWER").c_str(), ss8.str().c_str());
 
 			_lstStats2->addRow(2, tr("STR_AMMUNITION").c_str(), tr(ammo->getName()).c_str());

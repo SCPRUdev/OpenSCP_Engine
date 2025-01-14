@@ -218,9 +218,9 @@ public:
 	/// Cleans up the BattleUnit.
 	~BattleUnit();
 	/// Loads the unit from YAML.
-	void load(const YAML::YamlNodeReader& reader, const Mod *mod, const ScriptGlobal *shared);
+	void load(const YAML::Node &node, const Mod *mod, const ScriptGlobal *shared);
 	/// Saves the unit to YAML.
-	void save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) const;
+	YAML::Node save(const ScriptGlobal *shared) const;
 	/// Gets the BattleUnit's ID.
 	int getId() const;
 	/// Calculates the distance squared between the unit and a given position.
@@ -539,8 +539,6 @@ public:
 	void setName(const std::string &name);
 	/// Gets the unit's name.
 	std::string getName(Language *lang, bool debugAppendId = false) const;
-	/// Gets the unit's gained experience points.
-	const UnitStats* getExpStats() const { return &_exp; }
 	/// Gets the unit's stats.
 	UnitStats *getBaseStats();
 	/// Gets the unit's stats.

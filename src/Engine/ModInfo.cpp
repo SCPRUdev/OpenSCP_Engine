@@ -22,7 +22,7 @@
 #include "CrossPlatform.h"
 #include "Exception.h"
 #include "Logger.h"
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include <sstream>
 #include <assert.h>
 
@@ -199,24 +199,27 @@ bool findCompatibleEngine(const EngineData (&l)[I], const std::string& e, const 
 
 } //namespace
 
-void ModInfo::load(const YAML::YamlNodeReader& reader)
+void ModInfo::load(const YAML::Node& doc)
 {
-	reader.tryRead("id", _id);
-	reader.tryRead("name", _name);
-	reader.tryRead("description", _desc);
-	if (const auto& ver = reader["version"])
+	_id       = doc["id"].as<std::string>(_id);
+	_name     = doc["name"].as<std::string>(_name);
+	_desc     = doc["description"].as<std::string>(_desc);
+	if (const YAML::Node& ver = doc["version"])
 	{
-		_version  = normalizeModVersion(_id, ver.readVal<std::string>());
+		_version  = normalizeModVersion(_id, ver.as<std::string>());
 		_versionDisplay = _version.first;
 	}
-	reader.tryRead("versionDisplay", _versionDisplay);
-	reader.tryRead("author", _author);
-	reader.tryRead("isMaster", _isMaster);
-	reader.tryRead("reservedSpace", _reservedSpace);
+	_versionDisplay = doc["versionDisplay"].as<std::string>(_versionDisplay);
+	_author   = doc["author"].as<std::string>(_author);
+	_isMaster = doc["isMaster"].as<bool>(_isMaster);
+	_reservedSpace = doc["reservedSpace"].as<int>(_reservedSpace);
 
-	if (reader.tryRead("requiredExtendedVersion", _requiredExtendedVersion))
-		_requiredExtendedEngine = "Extended"; // for backward compatibility
-	reader.tryRead("requiredExtendedEngine", _requiredExtendedEngine);
+	if (const YAML::Node& req = doc["requiredExtendedVersion"])
+	{
+		_requiredExtendedVersion = req.as<std::string>(_requiredExtendedVersion);
+		_requiredExtendedEngine = "Extended"; //for backward compatibility
+	}
+	_requiredExtendedEngine = doc["requiredExtendedEngine"].as<std::string>(_requiredExtendedEngine);
 
 	_engineOk = findCompatibleEngine(supportedEngines, _requiredExtendedEngine, CrossPlatform::parseVersion(_requiredExtendedVersion));
 
@@ -235,9 +238,9 @@ void ModInfo::load(const YAML::YamlNodeReader& reader)
 		// masters, but they must be explicitly declared.
 		_master = "";
 	}
-	reader.tryRead("resourceConfig", _resourceConfigFile);
+	_resourceConfigFile = doc["resourceConfig"].as<std::string>(_resourceConfigFile);
 
-	reader.tryRead("master", _master);
+	_master = doc["master"].as<std::string>(_master);
 	if (_master == "*")
 	{
 		_master = "";
@@ -246,10 +249,10 @@ void ModInfo::load(const YAML::YamlNodeReader& reader)
 	if (_isMaster && _master.empty())
 	{
 		// only top-level masters can load external resource dirs
-		reader.tryRead("loadResources", _externalResourceDirs);
+		_externalResourceDirs = doc["loadResources"].as< std::vector<std::string> >(_externalResourceDirs);
 	}
 
-	if (const auto& req = reader["requiredMasterModVersion"])
+	if (const YAML::Node& req = doc["requiredMasterModVersion"])
 	{
 		if (_master.empty())
 		{
@@ -257,7 +260,7 @@ void ModInfo::load(const YAML::YamlNodeReader& reader)
 		}
 		else
 		{
-			_requiredMasterModVersion = normalizeModVersion(_id, req.readVal<std::string>());
+			_requiredMasterModVersion = normalizeModVersion(_id, req.as<std::string>());
 		}
 	}
 }

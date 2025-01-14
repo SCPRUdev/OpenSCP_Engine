@@ -19,7 +19,7 @@
  */
 #include <string>
 #include <vector>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -43,7 +43,7 @@ public:
 	/// Cleans up the item category ruleset.
 	~RuleItemCategory();
 	/// Loads item data from YAML.
-	void load(const YAML::YamlNodeReader& reader, Mod *mod);
+	void load(const YAML::Node& node, Mod *mod);
 	/// Gets the item category type.
 	const std::string &getType() const;
 	/// Gets the item category type, which should be used instead of this one.

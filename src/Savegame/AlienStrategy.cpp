@@ -66,7 +66,7 @@ void AlienStrategy::init(const Mod *mod)
  * Loads the data from a YAML file.
  * @param node YAML node.
  */
-void AlienStrategy::load(const YAML::YamlNodeReader& reader, const Mod* mod)
+void AlienStrategy::load(const YAML::Node &node, const Mod* mod)
 {
 	// Free allocated memory.
 	for (auto& pair : _regionMissions)
@@ -75,16 +75,17 @@ void AlienStrategy::load(const YAML::YamlNodeReader& reader, const Mod* mod)
 	}
 	_regionMissions.clear();
 	_regionChances.clear();
-	_regionChances.load(reader["regions"]);
-
-	for (const auto& possibleMissionReader : reader["possibleMissions"].children())
+	_regionChances.load(node["regions"]);
+	const YAML::Node &strat = node["possibleMissions"];
+	for (YAML::const_iterator nn = strat.begin(); nn != strat.end(); ++nn)
 	{
-		std::string region = possibleMissionReader["region"].readVal<std::string>();
-		if (mod->getRegion(region, false))
+		std::string region = (*nn)["region"].as<std::string>();
+		RuleRegion* regionRule = mod->getRegion(region, false);
+		if (regionRule)
 		{
-			const auto& missionOptionsReader = possibleMissionReader["missions"];
+			const YAML::Node& missions = (*nn)["missions"];
 			WeightedOptions* options = new WeightedOptions();
-			options->load(missionOptionsReader);
+			options->load(missions);
 			_regionMissions.insert(std::make_pair(region, options));
 		}
 		else
@@ -92,32 +93,28 @@ void AlienStrategy::load(const YAML::YamlNodeReader& reader, const Mod* mod)
 			Log(LOG_WARNING) << "Corrupted save: Alien strategy contains an invalid region: " << region << ", skipping...";
 		}
 	}
-	reader.tryRead("missionLocations", _missionLocations);
-	reader.tryRead("missionsRun", _missionRuns);
+	_missionLocations = node["missionLocations"].as< std::map<std::string, std::vector<std::pair<std::string, int> > > >(_missionLocations);
+	_missionRuns = node["missionsRun"].as< std::map<std::string, int> >(_missionRuns);
 }
 
 /**
  * Saves the alien data to a YAML file.
  * @return YAML node.
  */
-void AlienStrategy::save(YAML::YamlNodeWriter writer) const
+YAML::Node AlienStrategy::save() const
 {
-	writer.setAsMap();
-	_regionChances.save(writer["regions"]);
-	if (!_regionMissions.empty())
+	YAML::Node node;
+	node["regions"] = _regionChances.save();
+	for (auto& pair : _regionMissions)
 	{
-		auto possibleMissionsWriter = writer["possibleMissions"];
-		possibleMissionsWriter.setAsSeq();
-		for (auto& pair : _regionMissions)
-		{
-			auto regionWriter = possibleMissionsWriter.write();
-			regionWriter.setAsMap();
-			regionWriter.write("region", pair.first);
-			pair.second->save(regionWriter["missions"]);
-		}
+		YAML::Node subnode;
+		subnode["region"] = pair.first;
+		subnode["missions"] = pair.second->save();
+		node["possibleMissions"].push_back(subnode);
 	}
-	writer.write("missionLocations", _missionLocations);
-	writer.write("missionsRun", _missionRuns);
+	node["missionLocations"] = _missionLocations;
+	node["missionsRun"] = _missionRuns;
+	return node;
 }
 
 /**

@@ -21,6 +21,35 @@
 #include "../Engine/Exception.h"
 #include "../Mod/RuleItem.h"
 
+namespace YAML
+{
+	template<>
+	struct convert<OpenXcom::ArticleDefinitionRect>
+	{
+		static Node encode(const OpenXcom::ArticleDefinitionRect& rhs)
+		{
+			Node node;
+			node["x"] = rhs.x;
+			node["y"] = rhs.y;
+			node["width"] = rhs.width;
+			node["height"] = rhs.height;
+			return node;
+		}
+
+		static bool decode(const Node& node, OpenXcom::ArticleDefinitionRect& rhs)
+		{
+			if (!node.IsMap())
+				return false;
+
+			rhs.x = node["x"].as<int>(rhs.x);
+			rhs.y = node["y"].as<int>(rhs.y);
+			rhs.width = node["width"].as<int>(rhs.width);
+			rhs.height = node["height"].as<int>(rhs.height);
+			return true;
+		}
+	};
+}
+
 namespace OpenXcom
 {
 
@@ -53,39 +82,37 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinition::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinition::load(const YAML::Node &node, int listOrder)
 	{
-
-		reader.tryRead("id", id);
-		_pages[0].title = id;
-		reader.tryRead("section", section);
-		reader.tryRead("requires", _requires);
-		reader.tryRead("disabledBy", disabledBy);
-		reader.tryRead("hiddenCommendation", hiddenCommendation);
-		reader.tryRead("hiddenByDefault", hiddenByDefault);
+		id = _pages[0].title = node["id"].as<std::string>(id);
+		section = node["section"].as<std::string>(section);
+		_requires = node["requires"].as< std::vector<std::string> >(_requires);
+		disabledBy = node["disabledBy"].as< std::vector<std::string> >(disabledBy);
+		hiddenCommendation = node["hiddenCommendation"].as<bool>(hiddenCommendation);
+		hiddenByDefault = node["hiddenByDefault"].as<bool>(hiddenByDefault);
 		//_type_id = (UfopaediaTypeId)node["type_id"].as<int>(_type_id);
-		reader.tryRead("listOrder", _listOrder);
+		_listOrder = node["listOrder"].as<int>(_listOrder);
 		if (!_listOrder)
 		{
 			_listOrder = listOrder;
 		}
 
-		auto loadPage = [&](size_t offset, const YAML::YamlNodeReader& r)
+		auto loadPage = [&](size_t offset, const YAML::Node &n)
 		{
-			if (r)
+			if (n)
 			{
-				r.tryRead("title", _pages[offset].title);
-				r.tryRead("text", _pages[offset].text);
-				RuleItem::loadAmmoSlotChecked(_pages[offset].ammoSlot, r["ammoSlot"], id);
+				_pages[offset].title = n["title"].as<std::string>(_pages[offset].title);
+				_pages[offset].text = n["text"].as<std::string>(_pages[offset].text);
+				RuleItem::loadAmmoSlotChecked(_pages[offset].ammoSlot, n["ammoSlot"], id);
 			}
 		};
 
-		loadPage(0, reader);
-		if (const auto& pagesNode = reader["pages"])
+		loadPage(0, node);
+		if (const YAML::Node& pagesNode = node["pages"])
 		{
-			if (pagesNode.isSeq())
+			if (pagesNode.IsSequence())
 			{
-				size_t size = pagesNode.childrenCount();
+				size_t size = pagesNode.size();
 				ArticlePage firstCopy = _pages[0];
 				_pages.resize(std::max(size_t{ 1 }, size), firstCopy); //all new pages are copy of old first page
 				for (size_t i = 0; i < size; ++i)
@@ -140,14 +167,14 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionCraft::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionCraft::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
-		reader.tryRead("image_id", image_id);
+		ArticleDefinition::load(node, listOrder);
+		image_id = node["image_id"].as<std::string>(image_id);
 		if (image_id.find("_CPAL") != std::string::npos)
 			customPalette = true;
-		reader.tryRead("rect_stats", rect_stats);
-		reader.tryRead("rect_text", rect_text);
+		rect_stats = node["rect_stats"].as<ArticleDefinitionRect>(rect_stats);
+		rect_text = node["rect_text"].as<ArticleDefinitionRect>(rect_text);
 	}
 
 	/**
@@ -161,10 +188,10 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionCraftWeapon::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionCraftWeapon::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
-		reader.tryRead("image_id", image_id);
+		ArticleDefinition::load(node, listOrder);
+		image_id = node["image_id"].as<std::string>(image_id);
 		if (image_id.find("_CPAL") != std::string::npos)
 			customPalette = true;
 	}
@@ -180,9 +207,9 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionText::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionText::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
+		ArticleDefinition::load(node, listOrder);
 	}
 
 	/**
@@ -196,15 +223,15 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionTextImage::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionTextImage::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
-		reader.tryRead("image_id", image_id);
+		ArticleDefinition::load(node, listOrder);
+		image_id = node["image_id"].as<std::string>(image_id);
 		if (image_id.find("_CPAL") != std::string::npos)
 			customPalette = true;
-		reader.tryRead("text_width", text_width);
-		reader.tryRead("align_bottom", align_bottom);
-		reader.tryRead("rect_text", rect_text);
+		text_width = node["text_width"].as<int>(text_width);
+		align_bottom = node["align_bottom"].as<bool>(align_bottom);
+		rect_text = node["rect_text"].as<ArticleDefinitionRect>(rect_text);
 	}
 
 	/**
@@ -218,15 +245,15 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionTFTD::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionTFTD::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
-		reader.tryRead("type_id", _type_id);
-		reader.tryRead("image_id", image_id);
+		ArticleDefinition::load(node, listOrder);
+		_type_id = (UfopaediaTypeId)(node["type_id"].as<int>(_type_id));
+		image_id = node["image_id"].as<std::string>(image_id);
 		if (image_id.find("_CPAL") != std::string::npos)
 			customPalette = true;
-		text_width = reader["text_width"].readVal(157); // 95% of these won't need to be defined, so let's give it a default
-		reader.tryRead("weapon", weapon);
+		text_width = node["text_width"].as<int>(157); // 95% of these won't need to be defined, so let's give it a default
+		weapon = node["weapon"].as<std::string>(weapon);
 	}
 
 	/**
@@ -240,9 +267,9 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionBaseFacility::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionBaseFacility::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
+		ArticleDefinition::load(node, listOrder);
 	}
 
 	/**
@@ -256,10 +283,10 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionItem::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionItem::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
-		reader.tryRead("weapon", weapon);
+		ArticleDefinition::load(node, listOrder);
+		weapon = node["weapon"].as<std::string>(weapon);
 	}
 
 	/**
@@ -273,9 +300,9 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionUfo::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionUfo::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
+		ArticleDefinition::load(node, listOrder);
 	}
 
 	/**
@@ -289,10 +316,10 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionArmor::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionArmor::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
-		reader.tryRead("image_id", image_id);
+		ArticleDefinition::load(node, listOrder);
+		image_id = node["image_id"].as<std::string>(image_id);
 		if (image_id.find("_CPAL") != std::string::npos)
 			customPalette = true;
 	}
@@ -308,23 +335,12 @@ namespace OpenXcom
 	 * @param node YAML node.
 	 * @param listOrder The list weight for this article.
 	 */
-	void ArticleDefinitionVehicle::load(const YAML::YamlNodeReader& reader, int listOrder)
+	void ArticleDefinitionVehicle::load(const YAML::Node &node, int listOrder)
 	{
-		ArticleDefinition::load(reader, listOrder);
-		reader.tryRead("image_id", image_id);
+		ArticleDefinition::load(node, listOrder);
+		image_id = node["image_id"].as<std::string>(image_id);
 		if (image_id.find("_CPAL") != std::string::npos)
 			customPalette = true;
-		reader.tryRead("weapon", weapon);
-	}
-
-	// helper overloads for deserialization-only
-	bool read(ryml::ConstNodeRef const& n, ArticleDefinitionRect* val)
-	{
-		YAML::YamlNodeReader reader(nullptr, n);
-		reader.tryRead("x", val->x);
-		reader.tryRead("y", val->y);
-		reader.tryRead("width", val->width);
-		reader.tryRead("height", val->height);
-		return true;
+		weapon = node["weapon"].as<std::string>(weapon);
 	}
 }

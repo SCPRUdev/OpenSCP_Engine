@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -44,9 +44,9 @@ public:
 	/// Cleans up the craft weapon.
 	~CraftWeapon();
 	/// Loads the craft weapon from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Saves the craft weapon to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Gets the craft weapon's ruleset.
 	RuleCraftWeapon *getRules() const;
 	/// Gets the craft weapon's ammo.

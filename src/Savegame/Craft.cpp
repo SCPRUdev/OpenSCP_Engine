@@ -46,6 +46,35 @@
 #include "SerializationHelper.h"
 #include "../Engine/Logger.h"
 
+namespace YAML
+{
+	template<>
+	struct convert<OpenXcom::VehicleDeploymentData>
+	{
+		static Node encode(const OpenXcom::VehicleDeploymentData& rhs)
+		{
+			Node node;
+			node["type"] = rhs.type;
+			node["pos"] = rhs.pos;
+			node["dir"] = rhs.dir;
+			//node["used"] = rhs.used; // not needed
+			return node;
+		}
+
+		static bool decode(const Node& node, OpenXcom::VehicleDeploymentData& rhs)
+		{
+			if (!node.IsMap())
+				return false;
+
+			rhs.type = node["type"].as<std::string>(rhs.type);
+			rhs.pos = node["pos"].as<OpenXcom::Position>(rhs.pos);
+			rhs.dir = node["dir"].as<int>(rhs.dir);
+			//rhs.used = node["used"].as<bool>(rhs.used); // not needed
+			return true;
+		}
+	};
+}
+
 namespace OpenXcom
 {
 
@@ -115,27 +144,25 @@ Craft::~Craft()
  * @param mod Mod for the saved game.
  * @param save Pointer to the saved game.
  */
-void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, const Mod *mod, SavedGame *save)
+void Craft::load(const YAML::Node &node, const ScriptGlobal *shared, const Mod *mod, SavedGame *save)
 {
-	const auto& reader = node.useIndex();
-	MovingTarget::load(reader);
-
-	reader.tryRead("fuel", _fuel);
-	reader.tryRead("excessFuel", _excessFuel);
-	reader.tryRead("damage", _damage);
-	reader.tryRead("shield", _shield);
+	MovingTarget::load(node);
+	_fuel = node["fuel"].as<int>(_fuel);
+	_excessFuel = node["excessFuel"].as<int>(_excessFuel);
+	_damage = node["damage"].as<int>(_damage);
+	_shield = node["shield"].as<int>(_shield);
 
 	int j = 0;
-	for (const auto& weaponsReader : reader["weapons"].children())
+	for (YAML::const_iterator i = node["weapons"].begin(); i != node["weapons"].end(); ++i)
 	{
 		if (_rules->getWeapons() > j)
 		{
-			std::string type = weaponsReader["type"].readVal<std::string>();
+			std::string type = (*i)["type"].as<std::string>();
 			RuleCraftWeapon* weapon = mod->getCraftWeapon(type);
 			if (type != "0" && weapon)
 			{
 				CraftWeapon *w = new CraftWeapon(weapon, 0);
-				w->load(weaponsReader);
+				w->load(*i);
 				_weapons[j] = w;
 				_stats += weapon->getBonusStats();
 			}
@@ -151,7 +178,7 @@ void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, c
 		}
 	}
 
-	_items->load(reader["items"], mod);
+	_items->load(node["items"], mod);
 	// Some old saves have bad items, better get rid of them to avoid further bugs
 	for (auto iter = _items->getContents()->begin(); iter != _items->getContents()->end();)
 	{
@@ -167,9 +194,9 @@ void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, c
 			++iter;
 		}
 	}
-	for (const auto& vehiclesReader : reader["vehicles"].children())
+	for (YAML::const_iterator i = node["vehicles"].begin(); i != node["vehicles"].end(); ++i)
 	{
-		std::string type = vehiclesReader["type"].readVal<std::string>();
+		std::string type = (*i)["type"].as<std::string>();
 		auto* ruleItem = mod->getItem(type);
 		if (ruleItem)
 		{
@@ -178,7 +205,7 @@ void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, c
 			{
 				int size = ruleUnit->getArmor()->getTotalSize();
 				Vehicle *v = new Vehicle(ruleItem, 0, size);
-				v->load(vehiclesReader);
+				v->load(*i);
 				_vehicles.push_back(v);
 			}
 			else
@@ -191,14 +218,14 @@ void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, c
 			Log(LOG_ERROR) << "Failed to load vehicles item " << type;
 		}
 	}
-	reader.tryRead("status", _status);
-	reader.tryRead("lowFuel", _lowFuel);
-	reader.tryRead("mission", _mission);
-	reader.tryRead("interceptionOrder", _interceptionOrder);
-	if (const auto& dest = reader["dest"])
+	_status = node["status"].as<std::string>(_status);
+	_lowFuel = node["lowFuel"].as<bool>(_lowFuel);
+	_mission = node["mission"].as<bool>(_mission);
+	_interceptionOrder = node["interceptionOrder"].as<int>(_interceptionOrder);
+	if (const YAML::Node &dest = node["dest"])
 	{
-		std::string type = dest["type"].readVal<std::string>();
-		int id = dest["id"].readVal<int>();
+		std::string type = dest["type"].as<std::string>();
+		int id = dest["id"].as<int>();
 		if (type == "STR_BASE")
 		{
 			returnToBase();
@@ -251,15 +278,21 @@ void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, c
 			}
 		}
 	}
-	reader.tryRead("takeoff", _takeoff);
-	reader.tryRead("inBattlescape", _inBattlescape);
-	reader.tryRead("isAutoPatrolling", _isAutoPatrolling);
-	reader.tryRead("lonAuto", _lonAuto);
-	reader.tryRead("latAuto", _latAuto);
-	reader.tryRead("pilots", _pilots);
-	reader.tryRead("customSoldierDeployment", _customSoldierDeployment);
-	reader.tryRead("customVehicleDeployment", _customVehicleDeployment);
-	reader.tryRead("skinIndex", _skinIndex);
+	_takeoff = node["takeoff"].as<int>(_takeoff);
+	_inBattlescape = node["inBattlescape"].as<bool>(_inBattlescape);
+	_isAutoPatrolling = node["isAutoPatrolling"].as<bool>(_isAutoPatrolling);
+	_lonAuto = node["lonAuto"].as<double>(_lonAuto);
+	_latAuto = node["latAuto"].as<double>(_latAuto);
+	_pilots = node["pilots"].as< std::vector<int> >(_pilots);
+	if (const YAML::Node& customSoldierDeployment = node["customSoldierDeployment"])
+	{
+		_customSoldierDeployment = customSoldierDeployment.as< std::map<int, SoldierDeploymentData> >();
+	}
+	if (const YAML::Node& customVehicleDeployment = node["customVehicleDeployment"])
+	{
+		_customVehicleDeployment = customVehicleDeployment.as< std::vector<VehicleDeploymentData> >();
+	}
+	_skinIndex = node["skinIndex"].as<int>(_skinIndex);
 	if (_skinIndex > _rules->getMaxSkinIndex())
 	{
 		_skinIndex = 0;
@@ -269,7 +302,7 @@ void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, c
 
 	recalcSpeedMaxRadian();
 
-	_scriptValues.load(reader, shared);
+	_scriptValues.load(node, shared);
 }
 
 /**
@@ -277,12 +310,12 @@ void Craft::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, c
  * @param node YAML node.
  * @param save The game data. Used to find the UFO's target (= xcom craft).
  */
-void Craft::finishLoading(const YAML::YamlNodeReader& reader, SavedGame *save)
+void Craft::finishLoading(const YAML::Node &node, SavedGame *save)
 {
-	if (const auto& dest = reader["dest"])
+	if (const YAML::Node &dest = node["dest"])
 	{
-		std::string type = dest["type"].readVal<std::string>();
-		int id = dest["id"].readVal<int>();
+		std::string type = dest["type"].as<std::string>();
+		int id = dest["id"].as<int>();
 
 		bool found = false;
 		for (auto* xbase : *save->getBases())
@@ -336,55 +369,66 @@ void Craft::initFixedWeapons(const Mod* mod)
  * Saves the craft to a YAML file.
  * @return YAML node.
  */
-void Craft::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) const
+YAML::Node Craft::save(const ScriptGlobal *shared) const
 {
-	writer.setAsMap();
-	MovingTarget::save(writer);
-	writer.write("type", _rules->getType());
-	writer.write("fuel", _fuel);
+	YAML::Node node = MovingTarget::save();
+	node["type"] = _rules->getType();
+	node["fuel"] = _fuel;
 	if (_excessFuel != 0)
-		writer.write("excessFuel", _excessFuel);
-	writer.write("damage", _damage);
-	writer.write("shield", _shield);
-	writer.write("weapons", _weapons,
-		[](YAML::YamlNodeWriter& vectorWriter, CraftWeapon* w)
+		node["excessFuel"] = _excessFuel;
+	node["damage"] = _damage;
+	node["shield"] = _shield;
+	for (const auto* cw : _weapons)
+	{
+		YAML::Node subnode;
+		if (cw != 0)
 		{
-			auto cwWriter = vectorWriter.write();
-			cwWriter.setAsMap();
-			if (w)
-				w->save(cwWriter);
-			else
-				cwWriter.write("type", "0");
-		});
-	_items->save(writer["items"]);
-	writer.write("vehicles", _vehicles,
-		[](YAML::YamlNodeWriter& vectorWriter, Vehicle* v)
-		{ v->save(vectorWriter.write()); });
-	writer.write("status", _status);
+			subnode = cw->save();
+		}
+		else
+		{
+			subnode["type"] = "0";
+		}
+		node["weapons"].push_back(subnode);
+	}
+	node["items"] = _items->save();
+	for (const auto* vehicle : _vehicles)
+	{
+		node["vehicles"].push_back(vehicle->save());
+	}
+	node["status"] = _status;
 	if (_lowFuel)
-		writer.write("lowFuel", _lowFuel);
+		node["lowFuel"] = _lowFuel;
 	if (_mission)
-		writer.write("mission", _mission);
+		node["mission"] = _mission;
 	if (_inBattlescape)
-		writer.write("inBattlescape", _inBattlescape);
+		node["inBattlescape"] = _inBattlescape;
 	if (_interceptionOrder != 0)
-		writer.write("interceptionOrder", _interceptionOrder);
+		node["interceptionOrder"] = _interceptionOrder;
 	if (_takeoff != 0)
-		writer.write("takeoff", _takeoff);
+		node["takeoff"] = _takeoff;
 	if (_isAutoPatrolling)
-		writer.write("isAutoPatrolling", _isAutoPatrolling);
-	writer.write("lonAuto", serializeDouble(_lonAuto));
-	writer.write("latAuto", serializeDouble(_latAuto));
-	if (_pilots.size())
-		writer.write("pilots", _pilots);
+		node["isAutoPatrolling"] = _isAutoPatrolling;
+	node["lonAuto"] = serializeDouble(_lonAuto);
+	node["latAuto"] = serializeDouble(_latAuto);
+	for (int soldierId : _pilots)
+	{
+		node["pilots"].push_back(soldierId);
+	}
 	if (!_customSoldierDeployment.empty())
-		writer.write("customSoldierDeployment", _customSoldierDeployment);
+	{
+		node["customSoldierDeployment"] = _customSoldierDeployment;
+	}
 	if (!_customVehicleDeployment.empty())
-		writer.write("customVehicleDeployment", _customVehicleDeployment);
+	{
+		node["customVehicleDeployment"] = _customVehicleDeployment;
+	}
 	if (_skinIndex != 0)
-		writer.write("skinIndex", _skinIndex);
+		node["skinIndex"] = _skinIndex;
 
-	_scriptValues.save(writer, shared);
+	_scriptValues.save(node, shared);
+
+	return node;
 }
 
 /**
@@ -392,9 +436,9 @@ void Craft::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) const
  * @param node YAML node.
  * @return Unique craft id.
  */
-CraftId Craft::loadId(const YAML::YamlNodeReader& reader)
+CraftId Craft::loadId(const YAML::Node &node)
 {
-	return std::make_pair(reader["type"].readVal<std::string>(), reader["id"].readVal<int>());
+	return std::make_pair(node["type"].as<std::string>(), node["id"].as<int>());
 }
 
 /**
@@ -2309,28 +2353,5 @@ void Craft::ScriptRegister(ScriptParserBase* parser)
 	b.addDebugDisplay<&debugDisplayScript>();
 }
 
-// helper overloads for (de)serialization
-bool read(ryml::ConstNodeRef const& n, VehicleDeploymentData* val)
-{
-	YAML::YamlNodeReader reader(nullptr, n);
-	if (!reader.isMap())
-		return false;
-	reader.tryRead("type", val->type);
-	reader.tryRead("pos", val->pos);
-	reader.tryRead("dir", val->dir);
-	// reader.tryRead("used", val->used); // not needed
-	return true;
-}
-
-void write(ryml::NodeRef* n, VehicleDeploymentData const& val)
-{
-	YAML::YamlNodeWriter writer(nullptr, *n);
-	writer.setAsMap();
-	writer.setFlowStyle();
-	writer.write("type", val.type);
-	writer.write("pos", val.pos);
-	writer.write("dir", val.dir);
-	// writer.write("used", val.used); // not needed
-}
 
 }

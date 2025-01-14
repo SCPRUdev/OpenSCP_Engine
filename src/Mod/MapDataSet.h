@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <SDL.h>
+#include <yaml-cpp/yaml.h>
 #include "../Mod/MCDPatch.h"
 
 namespace OpenXcom

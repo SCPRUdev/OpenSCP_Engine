@@ -21,8 +21,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <list>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "../Mod/RuleBaseFacilityFunctions.h"
 
 #ifndef BASEFACILITIESITERATOR
@@ -193,14 +192,14 @@ public:
 	/// Cleans up the base.
 	~Base();
 	/// Loads the base from YAML.
-	void load(const YAML::YamlNodeReader& reader, SavedGame *save, bool newGame, bool newBattleGame = false);
+	void load(const YAML::Node& node, SavedGame *save, bool newGame, bool newBattleGame = false);
 	/// Finishes loading the base (more specifically all craft in the base) from YAML.
-	void finishLoading(const YAML::YamlNodeReader& reader, SavedGame *save);
+	void finishLoading(const YAML::Node& node, SavedGame *save);
 	void calculateServices(SavedGame* save);
 	/// Tests whether the base facilities are within the base boundaries and not overlapping.
 	bool isOverlappingOrOverflowing();
 	/// Saves the base to YAML.
-	void save(YAML::YamlNodeWriter writer) const override;
+	YAML::Node save() const override;
 	/// Gets the base's type.
 	std::string getType() const override;
 	/// Gets the base's name.
@@ -397,15 +396,12 @@ public:
 	BasePlacementErrors isAreaInUse(BaseAreaSubset area, const RuleBaseFacility* replacement = nullptr) const;
 	/// Gets available base functionality.
 	RuleBaseFacilityFunctions getProvidedBaseFunc(BaseAreaSubset skip) const;
-	RuleBaseFacilityFunctions getInherentProvidedBaseFunc() const { return _provideBaseFunc; }
 	/// Gets used base functionality.
 	RuleBaseFacilityFunctions getRequireBaseFunc(BaseAreaSubset skip) const;
 	/// Gets forbidden base functionality.
 	RuleBaseFacilityFunctions getForbiddenBaseFunc(BaseAreaSubset skip) const;
-	RuleBaseFacilityFunctions getInherentForbiddenBaseFunc() const { return _forbiddenBaseFunc; }
 	/// Gets future base functionality.
 	RuleBaseFacilityFunctions getFutureBaseFunc(BaseAreaSubset skip) const;
-	RuleBaseFacilityFunctions getInherentFutureBaseFunc() const { return _provideBaseFunc; }
 	/// Checks if it is possible to build another facility of a given type.
 	bool isMaxAllowedLimitReached(RuleBaseFacility *rule) const;
 

@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "WeightedOptions.h"
 
 namespace OpenXcom
@@ -38,9 +38,9 @@ public:
 	/// Initialize values according to the rules.
 	void init(const Mod *mod);
 	/// Loads the data from YAML.
-	void load(const YAML::YamlNodeReader& reader, const Mod* mod);
+	void load(const YAML::Node& node, const Mod* mod);
 	/// Saves the data to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Choose a random region for a regular mission.
 	std::string chooseRandomRegion(const Mod *mod);
 	/// Choose a random mission for a region.

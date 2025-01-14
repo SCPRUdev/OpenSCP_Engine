@@ -40,23 +40,22 @@ ExtraStrings::~ExtraStrings()
  * Loads the extra strings set from YAML.
  * @param node YAML node.
  */
-void ExtraStrings::load(const YAML::YamlNodeReader& reader)
+void ExtraStrings::load(const YAML::Node &node)
 {
-	for (const auto& string : reader["strings"].children())
+	for (YAML::const_iterator i = node["strings"].begin(); i != node["strings"].end(); ++i)
 	{
 		// Regular strings
-		std::string key = string.readKey<std::string>();
-		if (string.hasVal())
+		if (i->second.IsScalar())
 		{
-			_strings[key] = string.readVal<std::string>();
+			_strings[i->first.as<std::string>()] = i->second.as<std::string>();
 		}
 		// Strings with plurality
-		else if (string.isMap())
+		else if (i->second.IsMap())
 		{
-			for (const auto& plurality : string.children())
+			for (YAML::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				std::string s = key + "_" + plurality.readKey<std::string>();
-				_strings[s] = plurality.readVal<std::string>();
+				std::string s = i->first.as<std::string>() + "_" + j->first.as<std::string>();
+				_strings[s] = j->second.as<std::string>();
 			}
 		}
 	}

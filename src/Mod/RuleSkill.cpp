@@ -25,7 +25,7 @@ namespace OpenXcom
 {
 
 RuleSkill::RuleSkill(const std::string& type) : _type(type),
-	_targetMode(BA_NONE), _compatibleBattleType(BT_NONE), _isPsiRequired(false), _checkHandsOnly(true), _checkHandsOnly2(false)
+	_targetMode(BA_NONE), _compatibleBattleType(BT_NONE), _isPsiRequired(false), _checkHandsOnly(true)
 {
 }
 
@@ -34,36 +34,35 @@ RuleSkill::RuleSkill(const std::string& type) : _type(type),
  * @param node YAML node.
  * @param mod Mod for the skill.
  */
-void RuleSkill::load(const YAML::YamlNodeReader& reader, Mod *mod, const ModScript& parsers)
+void RuleSkill::load(const YAML::Node& node, Mod *mod, const ModScript& parsers)
 {
-	if (const auto& parent = reader["refNode"])
+	if (const YAML::Node& parent = node["refNode"])
 	{
 		load(parent, mod, parsers);
 	}
 
-	int targetMode = (int)reader["targetMode"].readVal(_targetMode);
+	int targetMode = node["targetMode"].as<int>(_targetMode);
 	targetMode = targetMode < 0 ? 0 : targetMode;
 	targetMode = targetMode > BA_CQB ? 0 : targetMode;
 	_targetMode = static_cast<BattleActionType>(targetMode);
 
-	int compBattleType = (int)reader["battleType"].readVal(_compatibleBattleType);
+	int compBattleType = node["battleType"].as<int>(_compatibleBattleType);
 	compBattleType = compBattleType < 0 ? 0 : compBattleType;
 	compBattleType = compBattleType > BT_CORPSE ? 0 : compBattleType;
 	_compatibleBattleType = static_cast<BattleType>(compBattleType);
 
-	reader.tryRead("isPsiRequired", _isPsiRequired);
-	reader.tryRead("checkHandsOnly", _checkHandsOnly);
-	reader.tryRead("checkHandsOnly2", _checkHandsOnly2);
+	_isPsiRequired = node["isPsiRequired"].as<bool>(_isPsiRequired);
+	_checkHandsOnly = node["checkHandsOnly"].as<bool>(_checkHandsOnly);
 
-	_cost.loadCost(reader, "Use");
-	_flat.loadPercent(reader, "Use");
+	_cost.loadCost(node, "Use");
+	_flat.loadPercent(node, "Use");
 
-	mod->loadUnorderedNames(_type, _compatibleWeaponNames, reader["compatibleWeapons"]);
-	mod->loadUnorderedNames(_type,_requiredBonusNames, reader["requiredBonuses"]);
+	mod->loadUnorderedNames(_type, _compatibleWeaponNames, node["compatibleWeapons"]);
+	mod->loadUnorderedNames(_type,_requiredBonusNames, node["requiredBonuses"]);
 
-	_scriptValues.load(reader, parsers.getShared());
+	_scriptValues.load(node, parsers.getShared());
 
-	_skillScripts.load(_type, reader, parsers.skillScripts);
+	_skillScripts.load(_type, node, parsers.skillScripts);
 }
 
 /**

@@ -29,21 +29,21 @@ SoundDefinition::~SoundDefinition()
 {
 }
 
-void SoundDefinition::load(const YAML::YamlNodeReader& reader)
+void SoundDefinition::load(const YAML::Node &node)
 {
-	for (const auto& soundRange : reader["soundRanges"].children())
+	for (YAML::const_iterator i = node["soundRanges"].begin(); i != node["soundRanges"].end(); ++i)
 	{
-		std::pair<int, int> range = soundRange.readVal(std::make_pair<int, int>(0, 0));
+		std::pair<int, int> range = (*i).as<std::pair<int, int> >(std::make_pair<int, int>(0,0));
 		for (int j = range.first; j <= range.second; ++j)
 		{
 			_soundList.push_back(j);
 		}
 	}
-	for (const auto& sound : reader["sounds"].children())
+	for (YAML::const_iterator i = node["sounds"].begin(); i != node["sounds"].end(); ++i)
 	{
-		_soundList.push_back(sound.readVal(-1));
+		_soundList.push_back((*i).as<int>(-1));
 	}
-	reader.tryRead("file", _catFile);
+	_catFile = node["file"].as<std::string>(_catFile);
 }
 
 const std::vector<int> &SoundDefinition::getSoundList() const

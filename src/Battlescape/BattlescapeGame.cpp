@@ -245,7 +245,7 @@ int BattlescapeGame::think()
 							if (bu->getFaction() == sideBackup && !bu->isOut())
 							{
 								units++;
-								total += (bu->reselectAllowed() && (bu->getBaseStats()->tu > 0)) ? bu->getTimeUnits() * 100 / bu->getBaseStats()->tu : 0;
+								total += bu->reselectAllowed() ? bu->getTimeUnits() * 100 / bu->getBaseStats()->tu : 0;
 							}
 						}
 						ret = units > 0 ? total / units : 0;
@@ -424,7 +424,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
 	if (action.type == BA_SNAPSHOT || action.type == BA_AUTOSHOT || action.type == BA_AIMEDSHOT || action.type == BA_THROW || action.type == BA_HIT || action.type == BA_MINDCONTROL || action.type == BA_USE || action.type == BA_PANIC || action.type == BA_LAUNCH)
 	{
 		ss.clear();
-		ss << "Attack type=" << action.type << " target="<< action.target << " weapon=" << action.weapon->getRules()->getType();
+		ss << "Attack type=" << action.type << " target="<< action.target << " weapon=" << action.weapon->getRules()->getName();
 		_parentState->debug(ss.str());
 		action.updateTU();
 		if (action.type == BA_MINDCONTROL || action.type == BA_PANIC || action.type == BA_USE)

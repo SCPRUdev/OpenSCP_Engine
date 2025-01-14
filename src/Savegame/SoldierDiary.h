@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "BattleUnit.h"
 #include "SavedGame.h"
 
@@ -41,15 +41,15 @@ private:
 
 public:
 	/// Creates a new commendation and loads its contents from YAML.
-	SoldierCommendations(const YAML::YamlNodeReader& reader, const Mod* mod);
+	SoldierCommendations(const YAML::Node& node, const Mod* mod);
 	/// Creates a commendation of the specified type.
 	SoldierCommendations(const std::string& commendationName, const std::string& noun, const Mod* mod);
 	/// Cleans up the commendation.
 	~SoldierCommendations();
 	/// Loads the commendation information from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Saves the commendation information to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 
 	/// Get commendation rule config.
 	RuleCommendations* getRule() { return _rule; }
@@ -91,9 +91,9 @@ public:
 	/// Cleans up a diary.
 	~SoldierDiary();
 	/// Load a diary.
-	void load(const YAML::YamlNodeReader& reader, const Mod *mod);
+	void load(const YAML::Node& node, const Mod *mod);
 	/// Save a diary.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Update the diary statistics.
 	void updateDiary(BattleUnitStatistics*, std::vector<MissionStatistics*>*, Mod*);
 	/// Get the list of kills, mapped by rank.

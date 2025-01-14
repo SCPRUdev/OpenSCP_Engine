@@ -57,7 +57,7 @@ private:
 	Text *_txtGlobeTexture;
 	TextButton *_btnGlobeTexture;
 	TextButton *_btnGlobeTextureToggle;
-	ToggleTextButton *_btnUfoLanded;
+	ToggleTextButton *_btnUfoCrashed;
 	TextList *_lstSelect;
 	TextEdit *_btnQuickSearch;
 	std::map<Surface*, bool> _surfaceBackup;

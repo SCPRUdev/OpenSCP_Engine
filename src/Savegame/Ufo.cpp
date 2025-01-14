@@ -106,30 +106,39 @@ Ufo::~Ufo()
  * @param mod The game mod. Use to access the trajectory rules.
  * @param game The game data. Used to find the UFO's mission.
  */
-void Ufo::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, const Mod &mod, SavedGame &game)
+void Ufo::load(const YAML::Node &node, const ScriptGlobal *shared, const Mod &mod, SavedGame &game)
 {
-	const auto& reader = node.useIndex();
-	MovingTarget::load(reader);
-	reader.tryRead("uniqueId", _uniqueId);
-	reader.tryRead("missionWaveNumber", _missionWaveNumber);
-	reader.tryRead("crashId", _crashId);
-	reader.tryRead("landId", _landId);
-	reader.tryRead("damage", _damage);
-	reader.tryRead("shield", _shield);
-	reader.tryRead("shieldRechargeHandle", _shieldRechargeHandle);
-	reader.tryRead("altitude", _altitude);
-	reader.tryRead("direction", _direction);
-	reader.tryRead("detected", _detected);
-	reader.tryRead("hyperDetected", _hyperDetected);
-	reader.tryRead("secondsRemaining", _secondsRemaining);
-	reader.tryRead("inBattlescape", _inBattlescape);
+	MovingTarget::load(node);
+	_uniqueId = node["uniqueId"].as<int>(_uniqueId);
+	_missionWaveNumber = node["missionWaveNumber"].as<int>(_missionWaveNumber);
+	_crashId = node["crashId"].as<int>(_crashId);
+	_landId = node["landId"].as<int>(_landId);
+	_damage = node["damage"].as<int>(_damage);
+	_shield = node["shield"].as<int>(_shield);
+	_shieldRechargeHandle = node["shieldRechargeHandle"].as<int>(_shieldRechargeHandle);
+	_altitude = node["altitude"].as<std::string>(_altitude);
+	_direction = node["direction"].as<std::string>(_direction);
+	_detected = node["detected"].as<bool>(_detected);
+	_hyperDetected = node["hyperDetected"].as<bool>(_hyperDetected);
+	_secondsRemaining = node["secondsRemaining"].as<size_t>(_secondsRemaining);
+	_inBattlescape = node["inBattlescape"].as<bool>(_inBattlescape);
+	double lon = _lon;
+	double lat = _lat;
+	if (const YAML::Node &dest = node["dest"])
+	{
+		lon = dest["lon"].as<double>();
+		lat = dest["lat"].as<double>();
+	}
 	_dest = new Waypoint();
-	_dest->setLongitude(reader["dest"]["lon"].readVal(_lon));
-	_dest->setLatitude(reader["dest"]["lat"].readVal(_lat));
-	reader.tryRead("status", _status);
+	_dest->setLongitude(lon);
+	_dest->setLatitude(lat);
+	if (const YAML::Node &status = node["status"])
+	{
+		_status = (UfoStatus)status.as<int>();
+	}
 	if (game.getMonthsPassed() != -1)
 	{
-		int missionID = reader["mission"].readVal<int>();
+		int missionID = node["mission"].as<int>();
 		AlienMission* found = nullptr;
 		for (auto* am : game.getAlienMissions())
 		{
@@ -147,21 +156,21 @@ void Ufo::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, con
 		_mission = found;
 		_stats += _rules->getRaceBonus(_mission->getRace());
 
-		std::string tid = reader["trajectory"].readVal<std::string>();
+		std::string tid = node["trajectory"].as<std::string>();
 		_trajectory = mod.getUfoTrajectory(tid);
 		if (_trajectory == 0)
 		{
 			// Corrupt save file.
 			throw Exception("Unknown UFO trajectory, save file is corrupt.");
 		}
-		reader.tryRead("trajectoryPoint", _trajectoryPoint);
+		_trajectoryPoint = node["trajectoryPoint"].as<size_t>(_trajectoryPoint);
 	}
-	reader.tryRead("fireCountdown", _fireCountdown);
-	reader.tryRead("escapeCountdown", _escapeCountdown);
+	_fireCountdown = node["fireCountdown"].as<int>(_fireCountdown);
+	_escapeCountdown = node["escapeCountdown"].as<int>(_escapeCountdown);
 	if (_inBattlescape)
 		setSpeed(0);
 
-	_scriptValues.load(reader, shared);
+	_scriptValues.load(node, shared);
 }
 
 /**
@@ -169,22 +178,22 @@ void Ufo::load(const YAML::YamlNodeReader& node, const ScriptGlobal *shared, con
  * @param node YAML node.
  * @param save The game data. Used to find the UFO's target (= XCOM craft or another UFO).
  */
-void Ufo::finishLoading(const YAML::YamlNodeReader& reader, SavedGame &save)
+void Ufo::finishLoading(const YAML::Node &node, SavedGame &save)
 {
-	reader.tryRead("isHunterKiller", _isHunterKiller);
-	reader.tryRead("isEscort", _isEscort);
-	reader.tryRead("huntMode", _huntMode);
-	reader.tryRead("huntBehavior", _huntBehavior);
-	reader.tryRead("isHunting", _isHunting);
-	reader.tryRead("isEscorting", _isEscorting);
-	reader.tryRead("softlockShotCounter", _softlockShotCounter);
+	_isHunterKiller = node["isHunterKiller"].as<bool>(_isHunterKiller);
+	_isEscort = node["isEscort"].as<bool>(_isEscort);
+	_huntMode = node["huntMode"].as<int>(_huntMode);
+	_huntBehavior = node["huntBehavior"].as<int>(_huntBehavior);
+	_isHunting = node["isHunting"].as<bool>(_isHunting);
+	_isEscorting = node["isEscorting"].as<bool>(_isEscorting);
+	_softlockShotCounter = node["softlockShotCounter"].as<int>(_softlockShotCounter);
 
 	if (_isHunting)
 	{
-		if (const auto& dest = reader["dest"])
+		if (const YAML::Node &dest = node["dest"])
 		{
-			std::string type = dest["type"].readVal<std::string>();
-			int id = dest["id"].readVal<int>();
+			std::string type = dest["type"].as<std::string>();
+			int id = dest["id"].as<int>();
 			bool found = false;
 			for (auto* xbase : *save.getBases())
 			{
@@ -209,12 +218,12 @@ void Ufo::finishLoading(const YAML::YamlNodeReader& reader, SavedGame &save)
 	}
 	else if (_isEscorting)
 	{
-		if (const auto& dest = reader["dest"])
+		if (const YAML::Node &dest = node["dest"])
 		{
-			std::string type = dest["type"].readVal<std::string>();
+			std::string type = dest["type"].as<std::string>();
 			if (type == "STR_UFO")
 			{
-				int uniqueUfoId = dest["uniqueId"].readVal(0);
+				int uniqueUfoId = dest["uniqueId"].as<int>(0);
 				if (uniqueUfoId > 0)
 				{
 					for (auto* ufo : *save.getUfos())
@@ -237,11 +246,11 @@ void Ufo::finishLoading(const YAML::YamlNodeReader& reader, SavedGame &save)
 	}
 	//if (_isHunting || _isEscorting)
 	{
-		if (const auto& origWaypoint = reader["origWaypoint"])
+		if (const YAML::Node &origWaypoint = node["origWaypoint"])
 		{
 			_origWaypoint = new Waypoint();
-			_origWaypoint->setLongitude(origWaypoint["lon"].readVal<double>());
-			_origWaypoint->setLatitude(origWaypoint["lat"].readVal<double>());
+			_origWaypoint->setLongitude(origWaypoint["lon"].as<double>());
+			_origWaypoint->setLatitude(origWaypoint["lat"].as<double>());
 		}
 	}
 }
@@ -250,70 +259,77 @@ void Ufo::finishLoading(const YAML::YamlNodeReader& reader, SavedGame &save)
  * Saves the UFO to a YAML file.
  * @return YAML node.
  */
-void Ufo::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared, bool newBattle) const
+YAML::Node Ufo::save(const ScriptGlobal *shared, bool newBattle) const
 {
-	writer.setAsMap();
-	MovingTarget::save(writer);
-	writer.write("type", _rules->getType());
-	writer.write("uniqueId", _uniqueId);
-	writer.write("missionWaveNumber", _missionWaveNumber);
+	YAML::Node node = MovingTarget::save();
+	node["type"] = _rules->getType();
+	node["uniqueId"] = _uniqueId;
+	node["missionWaveNumber"] = _missionWaveNumber;
 	if (_crashId)
-		writer.write("crashId", _crashId);
+	{
+		node["crashId"] = _crashId;
+	}
 	else if (_landId)
-		writer.write("landId", _landId);
-	writer.write("damage", _damage);
-	writer.write("shield", _shield);
-	writer.write("shieldRechargeHandle", _shieldRechargeHandle);
-	writer.write("altitude", _altitude);
-	writer.write("direction", _direction);
-	writer.write("status", _status);
+	{
+		node["landId"] = _landId;
+	}
+	node["damage"] = _damage;
+	node["shield"] = _shield;
+	node["shieldRechargeHandle"] = _shieldRechargeHandle;
+	node["altitude"] = _altitude;
+	node["direction"] = _direction;
+	node["status"] = (int)_status;
 	if (_detected)
-		writer.write("detected", _detected);
+		node["detected"] = _detected;
 	if (_hyperDetected)
-		writer.write("hyperDetected", _hyperDetected);
+		node["hyperDetected"] = _hyperDetected;
 	if (_secondsRemaining)
-		writer.write("secondsRemaining", _secondsRemaining);
+		node["secondsRemaining"] = _secondsRemaining;
 	if (_inBattlescape)
-		writer.write("inBattlescape", _inBattlescape);
+		node["inBattlescape"] = _inBattlescape;
+
 	if (_isHunterKiller)
-		writer.write("isHunterKiller", _isHunterKiller);
+		node["isHunterKiller"] = _isHunterKiller;
 	if (_isEscort)
-		writer.write("isEscort", _isEscort);
-	writer.write("huntMode", _huntMode);
-	writer.write("huntBehavior", _huntBehavior);
+		node["isEscort"] = _isEscort;
+	node["huntMode"] = _huntMode;
+	node["huntBehavior"] = _huntBehavior;
 	if (_isHunting)
-		writer.write("isHunting", _isHunting);
+		node["isHunting"] = _isHunting;
 	if (_isEscorting)
-		writer.write("isEscorting", _isEscorting);
-	if (_softlockShotCounter)
-		writer.write("softlockShotCounter", _softlockShotCounter);
+		node["isEscorting"] = _isEscorting;
+	if (_softlockShotCounter > 0)
+		node["softlockShotCounter"] = _softlockShotCounter;
 	if (_origWaypoint)
-		_origWaypoint->save(writer["origWaypoint"]);
+		node["origWaypoint"] = _origWaypoint->save();
+
 	if (!newBattle)
 	{
-		writer.write("mission", _mission->getId());
-		writer.write("trajectory", _trajectory->getID());
-		writer.write("trajectoryPoint", _trajectoryPoint);
+		node["mission"] = _mission->getId();
+		node["trajectory"] = _trajectory->getID();
+		node["trajectoryPoint"] = _trajectoryPoint;
 	}
 
-	writer.write("fireCountdown", _fireCountdown);
-	writer.write("escapeCountdown", _escapeCountdown);
+	node["fireCountdown"] = _fireCountdown;
+	node["escapeCountdown"] = _escapeCountdown;
 
-	_scriptValues.save(writer, shared);
+	_scriptValues.save(node, shared);
+
+	return node;
 }
 
 /**
  * Saves the UFO's unique identifiers to a YAML file.
  * @return YAML node.
  */
-void Ufo::saveId(YAML::YamlNodeWriter writer) const
+YAML::Node Ufo::saveId() const
 {
-	writer.setAsMap();
-	MovingTarget::saveId(writer);
+	YAML::Node node = MovingTarget::saveId();
 	// this is needed, because _id is NOT unique until the UFO is detected
 	// and UFOs can be referenced by other entities even before they are detected
 	// (e.g. when they escort other UFOs)
-	writer.write("uniqueId", _uniqueId);
+	node["uniqueId"] = _uniqueId;
+	return node;
 }
 
 /**

@@ -50,7 +50,6 @@
 #include "../Mod/RuleItem.h"
 #include "../Mod/RuleSoldier.h"
 #include "../Mod/RuleSoldierBonus.h"
-#include "../Mod/RuleWeaponSet.h"
 #include "../fallthrough.h"
 #include "../fmath.h"
 #include "../Engine/Language.h"
@@ -132,256 +131,352 @@ SavedBattleGame::~SavedBattleGame()
  * @param mod for the saved game.
  * @param savedGame Pointer to saved game.
  */
-void SavedBattleGame::load(const YAML::YamlNodeReader& node, Mod *mod, SavedGame* savedGame)
+void SavedBattleGame::load(const YAML::Node &node, Mod *mod, SavedGame* savedGame)
 {
-	const auto& reader = node.useIndex();
-	int mapsize_x = reader["width"].readVal(_mapsize_x);
-	int mapsize_y = reader["length"].readVal(_mapsize_y);
-	int mapsize_z = reader["height"].readVal(_mapsize_z);
+	int mapsize_x = node["width"].as<int>(_mapsize_x);
+	int mapsize_y = node["length"].as<int>(_mapsize_y);
+	int mapsize_z = node["height"].as<int>(_mapsize_z);
 	initMap(mapsize_x, mapsize_y, mapsize_z);
 
-	reader.tryRead("missionType", _missionType);
-	reader.tryRead("strTarget", _strTarget);
-	reader.tryRead("strCraftOrBase", _strCraftOrBase);
-	if (reader["startingConditionType"])
+	_missionType = node["missionType"].as<std::string>(_missionType);
+	_strTarget = node["strTarget"].as<std::string>(_strTarget);
+	_strCraftOrBase = node["strCraftOrBase"].as<std::string>(_strCraftOrBase);
+	if (node["startingConditionType"])
 	{
-		std::string startingConditionType = reader["startingConditionType"].readVal<std::string>();
+		std::string startingConditionType = node["startingConditionType"].as<std::string>();
 		_startingCondition = mod->getStartingCondition(startingConditionType);
 	}
-	if (reader["enviroEffectsType"])
+	if (node["enviroEffectsType"])
 	{
-		std::string enviroEffectsType = reader["enviroEffectsType"].readVal<std::string>();
+		std::string enviroEffectsType = node["enviroEffectsType"].as<std::string>();
 		_enviroEffects = mod->getEnviroEffects(enviroEffectsType);
 	}
-	reader.tryRead("nameDisplay", _nameDisplay);
-	reader.tryRead("ecEnabledFriendly", _ecEnabledFriendly);
-	reader.tryRead("ecEnabledHostile", _ecEnabledHostile);
-	reader.tryRead("ecEnabledNeutral", _ecEnabledNeutral);
-	reader.tryRead("alienCustomDeploy", _alienCustomDeploy);
-	reader.tryRead("alienCustomMission", _alienCustomMission);
-	reader.tryRead("alienItemLevel", _alienItemLevel);
-	reader.tryRead("lastUsedMapScript", _lastUsedMapScript);
-	reader.tryRead("reinforcementsDeployment", _reinforcementsDeployment);
-	reader.tryRead("reinforcementsRace", _reinforcementsRace);
-	reader.tryRead("reinforcementsItemLevel", _reinforcementsItemLevel);
-	reader.tryRead("reinforcementsMemory", _reinforcementsMemory);
-	reader.tryRead("reinforcementsBlocks", _reinforcementsBlocks);
-	reader.tryRead("flattenedMapTerrainNames", _flattenedMapTerrainNames);
-	reader.tryRead("flattenedMapBlockNames", _flattenedMapBlockNames);
-	reader.tryRead("globalshade", _globalShade);
-	reader.tryRead("turn", _turn);
-	reader.tryRead("bughuntMinTurn", _bughuntMinTurn);
-	reader.tryRead("bughuntMode", _bughuntMode);
-	reader.tryRead("depth", _depth);
-	reader.tryRead("animFrame", _animFrame);
-	int selectedUnitId = reader["selectedUnit"].readVal<int>();
+	_nameDisplay = node["nameDisplay"].as<bool>(_nameDisplay);
+	_ecEnabledFriendly = node["ecEnabledFriendly"].as<bool>(_ecEnabledFriendly);
+	_ecEnabledHostile = node["ecEnabledHostile"].as<bool>(_ecEnabledHostile);
+	_ecEnabledNeutral = node["ecEnabledNeutral"].as<bool>(_ecEnabledNeutral);
+	_alienCustomDeploy = node["alienCustomDeploy"].as<std::string>(_alienCustomDeploy);
+	_alienCustomMission = node["alienCustomMission"].as<std::string>(_alienCustomMission);
+	_alienItemLevel = node["alienItemLevel"].as<int>(_alienItemLevel);
+	_lastUsedMapScript = node["lastUsedMapScript"].as<std::string>(_lastUsedMapScript);
+	_reinforcementsDeployment = node["reinforcementsDeployment"].as<std::string>(_reinforcementsDeployment);
+	_reinforcementsRace = node["reinforcementsRace"].as<std::string>(_reinforcementsRace);
+	_reinforcementsItemLevel = node["reinforcementsItemLevel"].as<int>(_reinforcementsItemLevel);
+	_reinforcementsMemory = node["reinforcementsMemory"].as< std::map<std::string, int> >(_reinforcementsMemory);
+	_reinforcementsBlocks = node["reinforcementsBlocks"].as< std::vector< std::vector<int> > >(_reinforcementsBlocks);
+	_flattenedMapTerrainNames = node["flattenedMapTerrainNames"].as< std::vector< std::vector<std::string> > >(_flattenedMapTerrainNames);
+	_flattenedMapBlockNames = node["flattenedMapBlockNames"].as< std::vector< std::vector<std::string> > >(_flattenedMapBlockNames);
+	_globalShade = node["globalshade"].as<int>(_globalShade);
+	_turn = node["turn"].as<int>(_turn);
+	_bughuntMinTurn = node["bughuntMinTurn"].as<int>(_bughuntMinTurn);
+	_bughuntMode = node["bughuntMode"].as<bool>(_bughuntMode);
+	_depth = node["depth"].as<int>(_depth);
+	_animFrame = node["animFrame"].as<int>(_animFrame);
+	int selectedUnit = node["selectedUnit"].as<int>();
 
-	for (const auto& mdsReader : reader["mapdatasets"].children())
+	for (YAML::const_iterator i = node["mapdatasets"].begin(); i != node["mapdatasets"].end(); ++i)
 	{
-		std::string name = mdsReader.readVal<std::string>();
+		std::string name = i->as<std::string>();
 		MapDataSet *mds = mod->getMapDataSet(name);
 		_mapDataSets.push_back(mds);
 	}
 
-	if (!reader["tileTotalBytesPer"])
+	if (!node["tileTotalBytesPer"])
 	{
 		// binary tile data not found, load old-style text tiles :(
-		for (const auto& tile : reader["tiles"].children())
+		for (YAML::const_iterator i = node["tiles"].begin(); i != node["tiles"].end(); ++i)
 		{
-			Position pos = tile["position"].readVal<Position>();
-			getTile(pos)->load(tile);
+			Position pos = (*i)["position"].as<Position>();
+			getTile(pos)->load((*i));
 		}
 	}
 	else
 	{
 		// load key to how the tile data was saved
 		Tile::SerializationKey serKey;
-		size_t totalTiles = reader["totalTiles"].readVal<size_t>();
+		size_t totalTiles = node["totalTiles"].as<size_t>();
 
 		memset(&serKey, 0, sizeof(Tile::SerializationKey));
-		serKey.index = reader["tileIndexSize"].readVal<char>(serKey.index);
-		serKey.totalBytes = reader["tileTotalBytesPer"].readVal<Uint32>(serKey.totalBytes);
-		serKey._fire = reader["tileFireSize"].readVal<char>(serKey._fire);
-		serKey._smoke = reader["tileSmokeSize"].readVal<char>(serKey._smoke);
-		serKey._mapDataID = reader["tileIDSize"].readVal<char>(serKey._mapDataID);
-		serKey._mapDataSetID = reader["tileSetIDSize"].readVal<char>(serKey._mapDataSetID);
-		serKey.boolFields = reader["tileBoolFieldsSize"].readVal<char>(1); // boolean flags used to be stored in an unmentioned byte (Uint8) :|
+		serKey.index = node["tileIndexSize"].as<char>(serKey.index);
+		serKey.totalBytes = node["tileTotalBytesPer"].as<Uint32>(serKey.totalBytes);
+		serKey._fire = node["tileFireSize"].as<char>(serKey._fire);
+		serKey._smoke = node["tileSmokeSize"].as<char>(serKey._smoke);
+		serKey._mapDataID = node["tileIDSize"].as<char>(serKey._mapDataID);
+		serKey._mapDataSetID = node["tileSetIDSize"].as<char>(serKey._mapDataSetID);
+		serKey.boolFields = node["tileBoolFieldsSize"].as<char>(1); // boolean flags used to be stored in an unmentioned byte (Uint8) :|
 
 		// load binary tile data!
-		std::vector<char> binTiles = reader["binTiles"].readValBase64();
+		YAML::Binary binTiles = node["binTiles"].as<YAML::Binary>();
 
-		Uint8* ptr = (Uint8*)binTiles.data();
-		Uint8* dataEnd = ptr + totalTiles * serKey.totalBytes;
+		Uint8 *r = (Uint8*)binTiles.data();
+		Uint8 *dataEnd = r + totalTiles * serKey.totalBytes;
 
-		while (ptr < dataEnd)
+		while (r < dataEnd)
 		{
-			int index = unserializeInt(&ptr, serKey.index);
-			assert(index >= 0 && index < _mapsize_x * _mapsize_z * _mapsize_y);
-			_tiles[index].loadBinary(ptr, serKey); // loadBinary's privileges to advance *r have been revoked
-			ptr += serKey.totalBytes - serKey.index; // r is now incremented strictly by totalBytes in case there are obsolete fields present in the data
+			int index = unserializeInt(&r, serKey.index);
+			assert (index >= 0 && index < _mapsize_x * _mapsize_z * _mapsize_y);
+			_tiles[index].loadBinary(r, serKey); // loadBinary's privileges to advance *r have been revoked
+			r += serKey.totalBytes-serKey.index; // r is now incremented strictly by totalBytes in case there are obsolete fields present in the data
 		}
 	}
-
 	if (_missionType == "STR_BASE_DEFENSE")
 	{
-		if (!reader.tryRead("moduleMap", _baseModules))
+		if (node["moduleMap"])
+		{
+			_baseModules = node["moduleMap"].as<std::vector< std::vector<std::pair<int, int> > > >();
+		}
+		else
 		{
 			// backwards compatibility: imperfect solution, modules that were completely destroyed
 			// prior to saving and updating builds will be counted as indestructible.
 			calculateModuleMap();
 		}
 	}
-	for (const auto& nodeConfig : reader["nodes"].children())
+	for (YAML::const_iterator i = node["nodes"].begin(); i != node["nodes"].end(); ++i)
 	{
 		Node *n = new Node();
-		n->load(nodeConfig);
+		n->load(*i);
 		_nodes.push_back(n);
 	}
 
-	//always reserve the sizes of your collections if you can
-	_units.reserve(reader["units"].childrenCount());
-	_items.reserve(reader["items"].childrenCount() + reader["itemsSpecial"].childrenCount());
-	_recoverConditional.reserve(reader["recoverConditional"].childrenCount());
-	_recoverGuaranteed.reserve(reader["recoverGuaranteed"].childrenCount());
-	// int -> BattleUnit; dictionaries for O(1) ID searching
-	std::unordered_map<int, BattleUnit*> unitIndex;
-	std::unordered_map<int, BattleItem*> itemIndex;
-	unitIndex.reserve(_units.capacity());
-	itemIndex.reserve(_items.capacity() + _recoverConditional.capacity() + _recoverGuaranteed.capacity());
 
-	auto findUnitById = [&](const YAML::YamlNodeReader& r) -> BattleUnit*
+
+	using NodeIterator = Collections::Range<Collections::ValueIterator<YAML::const_iterator>>;
+	using ItemVec = std::vector<BattleItem*>&;
+	using UnitVec = std::vector<BattleUnit*>&;
+
+	auto getNodeIterator = [&](const char* name) -> NodeIterator
 	{
-		int id = r.readVal(-1);
-		if (id == -1 || !unitIndex.count(id))
-			return nullptr;
-		return unitIndex.at(id);
+		auto& n = node[name];
+		return Collections::nonDeref(Collections::range(n.begin(), n.end()));
 	};
 
-	// units 1st pass
-	for (const auto& unitReader : reader["units"].children())
+	auto findUnitById = [&](const YAML::Node& n) -> BattleUnit*
 	{
-		UnitFaction faction = unitReader["faction"].readVal<UnitFaction>();
-		UnitFaction originalFaction = unitReader["originalFaction"].readVal(faction);
-		int id = unitReader["id"].readVal<int>();
-		BattleUnit* unit;
+		if (!n) return nullptr;
+
+		auto id = n.as<int>(-1);
+
+		if (id == -1) return nullptr;
+
+		for (auto* bu : _units)
+		{
+			if (bu->getId() == id)
+			{
+				return bu;
+			}
+		}
+		return nullptr;
+	};
+
+	// node to load from, vector to load into, offset for second pass processing
+	std::tuple<NodeIterator, UnitVec, size_t> toUnits = std::make_tuple(getNodeIterator("units"), std::ref(_units), 0u);
+
+
+	// node to load from, vector to load into, offset for second pass processing
+	std::tuple<NodeIterator, ItemVec, size_t> toContainer[] =
+	{
+		std::make_tuple(getNodeIterator("items"), std::ref(_items), 0u),
+		std::make_tuple(getNodeIterator("recoverConditional"), std::ref(_recoverConditional), 0u),
+		std::make_tuple(getNodeIterator("recoverGuaranteed"), std::ref(_recoverGuaranteed), 0u),
+		std::make_tuple(getNodeIterator("itemsSpecial"), std::ref(_items), 0u),
+	};
+
+
+	for (YAML::const_iterator i : std::get<NodeIterator>(toUnits))
+	{
+		UnitFaction faction = (UnitFaction)(*i)["faction"].as<int>();
+		UnitFaction originalFaction = (UnitFaction)(*i)["originalFaction"].as<int>(faction);
+		int id = (*i)["id"].as<int>();
+		BattleUnit *unit;
 		if (id < BattleUnit::MAX_SOLDIER_ID) // Unit is linked to a geoscape soldier
-			unit = new BattleUnit(mod, savedGame->getSoldier(id), _depth, nullptr); // look up the matching soldier
+		{
+			// look up the matching soldier
+			unit = new BattleUnit(mod, savedGame->getSoldier(id), _depth, nullptr);
+		}
 		else
 		{
-			std::string type = unitReader["genUnitType"].readVal<std::string>();
-			std::string armor = unitReader["genUnitArmor"].readVal<std::string>();
+			std::string type = (*i)["genUnitType"].as<std::string>();
+			std::string armor = (*i)["genUnitArmor"].as<std::string>();
 			// create a new Unit.
-			if (!mod->getUnit(type) || !mod->getArmor(armor))
-				continue;
+			if(!mod->getUnit(type) || !mod->getArmor(armor)) continue;
 			unit = new BattleUnit(mod, mod->getUnit(type), originalFaction, id, nullptr, mod->getArmor(armor), mod->getStatAdjustment(savedGame->getDifficulty()), _depth, nullptr);
 		}
-		unit->load(unitReader, this->getMod(), this->getMod()->getScriptGlobal());
+		unit->load(*i, this->getMod(), this->getMod()->getScriptGlobal());
 		// Handling of special built-in weapons will be done during and after the load of items
 		// unit->setSpecialWeapon(this, true);
+		std::get<UnitVec>(toUnits).push_back(unit);
 		if (faction == FACTION_PLAYER)
 		{
-			if ((unit->getId() == selectedUnitId) || (_selectedUnit == 0 && !unit->isOut()))
+			if ((unit->getId() == selectedUnit) || (_selectedUnit == 0 && !unit->isOut()))
 				_selectedUnit = unit;
 		}
-		else if (unit->getStatus() != STATUS_DEAD && !unit->isIgnored())
+		if (unit->getStatus() != STATUS_DEAD && !unit->isIgnored())
 		{
-			if (const auto& ai = unitReader["AI"])
+			if (const YAML::Node &ai = (*i)["AI"])
 			{
-				AIModule* aiModule = new AIModule(this, unit, 0);
+				AIModule *aiModule;
+				if (faction != FACTION_PLAYER)
+				{
+					aiModule = new AIModule(this, unit, 0);
+				}
+				else
+				{
+					continue;
+				}
 				aiModule->load(ai);
 				unit->setAIModule(aiModule);
 			}
 		}
-		unitIndex[id] = unit;
-		_units.push_back(unit);
 	}
 
-	std::pair<const char*, std::vector<BattleItem*>*> itemKeysAndVectors[] =
+	for (auto& pass : toContainer)
 	{
-		{ "items", &_items },
-		{ "recoverConditional", &_recoverConditional },
-		{ "recoverGuaranteed", &_recoverGuaranteed },
-		{ "itemsSpecial", &_items },
-	};
-	// items 1st pass
-	for (auto& keyAndVector : itemKeysAndVectors)
-	{
-		for (const auto& itemReader : reader[keyAndVector.first].children())
+		// update start point for matching ammo
+		std::get<size_t>(pass) = std::get<ItemVec>(pass).size();
+
+		for (YAML::const_iterator i : std::get<NodeIterator>(pass))
 		{
-			std::string type = itemReader["type"].readVal<std::string>();
-			if (!mod->getItem(type))
+			std::string type = (*i)["type"].as<std::string>();
+			if (mod->getItem(type))
+			{
+				int id = (*i)["id"].as<int>();
+				_itemId = std::max(_itemId, id);
+				BattleItem *item = new BattleItem(mod->getItem(type), &id);
+				item->load(*i, mod, this->getMod()->getScriptGlobal());
+
+				// match up items and units
+				{
+					BattleUnit* bu = findUnitById((*i)["owner"]);
+					if (bu)
+					{
+						item->setOwner(bu);
+						if (item->isSpecialWeapon())
+						{
+							bu->addLoadedSpecialWeapon(item);
+						}
+						else
+						{
+							bu->getInventory()->push_back(item);
+						}
+					}
+				}
+
+				{
+					BattleUnit* bu = findUnitById((*i)["previousOwner"]);
+					if (bu)
+					{
+						item->setPreviousOwner(bu);
+					}
+				}
+
+				{
+					BattleUnit* bu = findUnitById((*i)["unit"]);
+					if (bu)
+					{
+						item->setUnit(bu);
+					}
+				}
+
+				// match up items and tiles
+				if (item->getSlot() && item->getSlot()->getType() == INV_GROUND)
+				{
+					Position pos = (*i)["position"].as<Position>(Position(-1, -1, -1));
+					if (pos.x != -1)
+						getTile(pos)->addItem(item, item->getSlot());
+				}
+				std::get<ItemVec>(pass).push_back(item);
+			}
+			else
 			{
 				Log(LOG_ERROR) << "Failed to load item " << type;
-				continue;
 			}
-			int id = itemReader["id"].readVal<int>();
-			BattleItem* item = new BattleItem(mod->getItem(type), &id); //passing id as a pointer to serve as a counter is no longer used
-			item->load(itemReader, mod, this->getMod()->getScriptGlobal());
-
-			if (BattleUnit* owner = findUnitById(itemReader["owner"]))
-			{
-				item->setOwner(owner);
-				if (item->isSpecialWeapon())
-					owner->addLoadedSpecialWeapon(item);
-				else
-					owner->getInventory()->push_back(item);
-			}
-			item->setPreviousOwner(findUnitById(itemReader["previousOwner"]));
-			item->setUnit(findUnitById(itemReader["unit"]));
-
-			// match up items and tiles
-			if (item->getSlot() && item->getSlot()->getType() == INV_GROUND)
-			{
-				Position pos = itemReader["position"].readVal(Position(-1, -1, -1));
-				if (pos.x != -1)
-					getTile(pos)->addItem(item, item->getSlot());
-			}
-			_itemId = std::max(_itemId, item->getId());
-			itemIndex[item->getId()] = item;
-			keyAndVector.second->push_back(item);
 		}
 	}
 	_itemId++;
 
-	// units 2nd pass
-	for (const auto& unitReader : reader["units"].children())
+	// Note: this is for backwards-compatibility with older saves
+	for (auto* unit : _units)
 	{
-		if (BattleUnit* bu = findUnitById(unitReader["id"])) //not guaranteed that the unit was created
+		if (unit->isIgnored() || unit->getStatus() == STATUS_DEAD)
 		{
-			if (!bu->isIgnored() && bu->getStatus() != STATUS_DEAD)
-				bu->setSpecialWeapon(this, true); // Note: this is for backwards-compatibility with older saves
-			bu->setPreviousOwner(findUnitById(unitReader["previousOwner"]));
+			// dead or "timeout" units do not have special weapons.
+			continue;
 		}
+
+		unit->setSpecialWeapon(this, true);
 	}
 
-	// items 2nd pass
-	for (auto& keyAndVector : itemKeysAndVectors)
+
+	// tie units to its owner, running through the units again
+	for (YAML::const_iterator i : std::get<NodeIterator>(toUnits))
 	{
-		for (const auto& itemReader : reader[keyAndVector.first].children())
+		// get next unit to match owners
+		auto* unit = std::get<UnitVec>(toUnits)[std::get<size_t>(toUnits)++];
+
+		assert((*i)["id"].as<int>() == unit->getId());
+
+		unit->setPreviousOwner(findUnitById((*i)["previousOwner"]));
+	}
+
+	// tie ammo items to their weapons, running through the items again
+	for (auto& pass : toContainer)
+	{
+		for (YAML::const_iterator i : std::get<NodeIterator>(pass))
 		{
-			std::string type = itemReader["type"].readVal<std::string>();
-			if (!mod->getItem(type))
-				continue;
-			BattleItem* item = itemIndex.at(itemReader["id"].readVal<int>());
-			// if "ammoItemSlots" node exists, then link ammo items for all slots, else try the backwards-compatibility node
-			if (const auto& slotsReader = itemReader["ammoItemSlots"])
-				for (size_t slotIndex = 0; slotIndex < RuleItem::AmmoSlotMax; slotIndex++)
+			if (mod->getItem((*i)["type"].as<std::string>()))
+			{
+				// get next weapon to match ammo
+				auto* weapon = std::get<ItemVec>(pass)[std::get<size_t>(pass)++];
+
+				assert((*i)["id"].as<int>() == weapon->getId());
+
+				auto setItem = [&](int slot, const YAML::Node& n)
 				{
-					int itemId = slotsReader[slotIndex].readVal(-1);
-					if (itemId > -1 && itemIndex.count(itemId))
-						item->setAmmoForSlot(slotIndex, itemIndex.at(itemId));
+					if (n)
+					{
+						int ammoId = n.as<int>(-1);
+						if (ammoId != -1)
+						{
+							if (ammoId == weapon->getId())
+							{
+								weapon->setAmmoForSlot(slot, weapon);
+							}
+							else
+							{
+								for (auto* item : std::get<ItemVec>(pass))
+								{
+									if (item->getId() == ammoId)
+									{
+										weapon->setAmmoForSlot(slot, item);
+										break;
+									}
+								}
+							}
+						}
+					}
+				};
+
+				if (const YAML::Node& ammoSlots = (*i)["ammoItemSlots"])
+				{
+					for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+					{
+						setItem(slot, ammoSlots[slot]);
+					}
 				}
-			else if (const auto& slotReader = itemReader["ammoItem"])
-				item->setAmmoForSlot(0, itemIndex.at(slotReader.readVal(0)));
+				else
+				{
+					setItem(0, (*i)["ammoItem"]);
+				}
+			}
 		}
 	}
 
 	// restore order like before save
-	// is this necessary? who knows...
-	for (auto& keyAndVector : itemKeysAndVectors)
+	for (auto& pass : toContainer)
 	{
 		std::sort(
-			keyAndVector.second->begin(), keyAndVector.second->end(),
+			std::get<ItemVec>(pass).begin(), std::get<ItemVec>(pass).end(),
 			[](const BattleItem* itemA, const BattleItem* itemB)
 			{
 				return itemA->getId() < itemB->getId();
@@ -389,34 +484,34 @@ void SavedBattleGame::load(const YAML::YamlNodeReader& node, Mod *mod, SavedGame
 		);
 	}
 
-	reader.tryRead("vipEscapeType", _vipEscapeType);
-	reader.tryRead("vipSurvivalPercentage", _vipSurvivalPercentage);
-	reader.tryRead("vipsSaved", _vipsSaved);
-	reader.tryRead("vipsLost", _vipsLost);
-	reader.tryRead("vipsWaitingOutside", _vipsWaitingOutside);
-	reader.tryRead("vipsSavedScore", _vipsSavedScore);
-	reader.tryRead("vipsLostScore", _vipsLostScore);
-	reader.tryRead("vipsWaitingOutsideScore", _vipsWaitingOutsideScore);
-	reader.tryRead("objectiveType", _objectiveType);
-	reader.tryRead("objectivesDestroyed", _objectivesDestroyed);
-	reader.tryRead("objectivesNeeded", _objectivesNeeded);
-	reader.tryRead("tuReserved", _tuReserved);
-	reader.tryRead("kneelReserved", _kneelReserved);
-	reader.tryRead("ambience", _ambience);
-	reader.tryRead("ambientVolume", _ambientVolume);
-	reader.tryRead("ambienceRandom", _ambienceRandom);
-	reader.tryRead("minAmbienceRandomDelay", _minAmbienceRandomDelay);
-	reader.tryRead("maxAmbienceRandomDelay", _maxAmbienceRandomDelay);
-	reader.tryRead("currentAmbienceDelay", _currentAmbienceDelay);
-	reader.tryRead("music", _music);
-	_baseItems->load(reader["baseItems"], mod);
-	reader.tryRead("turnLimit", _turnLimit);
-	reader.tryRead("chronoTrigger", _chronoTrigger);
-	reader.tryRead("cheatTurn", _cheatTurn);
-	reader.tryRead("togglePersonalLight", _togglePersonalLight);
-	reader.tryRead("toggleNightVision", _toggleNightVision);
-	reader.tryRead("toggleBrightness", _toggleBrightness);
-	_scriptValues.load(reader, _rule->getScriptGlobal());
+	_vipEscapeType = (EscapeType)(node["vipEscapeType"].as<int>(_vipEscapeType));
+	_vipSurvivalPercentage = node["vipSurvivalPercentage"].as<int>(_vipSurvivalPercentage);
+	_vipsSaved = node["vipsSaved"].as<int>(_vipsSaved);
+	_vipsLost = node["vipsLost"].as<int>(_vipsLost);
+	_vipsWaitingOutside = node["vipsWaitingOutside"].as<int>(_vipsWaitingOutside);
+	_vipsSavedScore = node["vipsSavedScore"].as<int>(_vipsSavedScore);
+	_vipsLostScore = node["vipsLostScore"].as<int>(_vipsLostScore);
+	_vipsWaitingOutsideScore = node["vipsWaitingOutsideScore"].as<int>(_vipsWaitingOutsideScore);
+	_objectiveType = node["objectiveType"].as<int>(_objectiveType);
+	_objectivesDestroyed = node["objectivesDestroyed"].as<int>(_objectivesDestroyed);
+	_objectivesNeeded = node["objectivesNeeded"].as<int>(_objectivesNeeded);
+	_tuReserved = (BattleActionType)node["tuReserved"].as<int>(_tuReserved);
+	_kneelReserved = node["kneelReserved"].as<bool>(_kneelReserved);
+	_ambience = node["ambience"].as<int>(_ambience);
+	_ambientVolume = node["ambientVolume"].as<double>(_ambientVolume);
+	_ambienceRandom = node["ambienceRandom"].as<std::vector<int> >(_ambienceRandom);
+	_minAmbienceRandomDelay = node["minAmbienceRandomDelay"].as<int>(_minAmbienceRandomDelay);
+	_maxAmbienceRandomDelay = node["maxAmbienceRandomDelay"].as<int>(_maxAmbienceRandomDelay);
+	_currentAmbienceDelay = node["currentAmbienceDelay"].as<int>(_currentAmbienceDelay);
+	_music = node["music"].as<std::string>(_music);
+	_baseItems->load(node["baseItems"], mod);
+	_turnLimit = node["turnLimit"].as<int>(_turnLimit);
+	_chronoTrigger = ChronoTrigger(node["chronoTrigger"].as<int>(_chronoTrigger));
+	_cheatTurn = node["cheatTurn"].as<int>(_cheatTurn);
+	_togglePersonalLight = node["togglePersonalLight"].as<bool>(_togglePersonalLight);
+	_toggleNightVision = node["toggleNightVision"].as<bool>(_toggleNightVision);
+	_toggleBrightness = node["toggleBrightness"].as<int>(_toggleBrightness);
+	_scriptValues.load(node, _rule->getScriptGlobal());
 
 	// Sanity checks
 	for (auto* unit : _units)
@@ -479,65 +574,65 @@ void SavedBattleGame::loadMapResources(Mod *mod)
  * Saves the saved battle game to a YAML file.
  * @return YAML node.
  */
-void SavedBattleGame::save(YAML::YamlNodeWriter writer) const
+YAML::Node SavedBattleGame::save() const
 {
-	writer.setAsMap();
+	YAML::Node node;
 	if (_vipSurvivalPercentage > 0)
 	{
-		writer.write("vipEscapeType", _vipEscapeType);
-		writer.write("vipSurvivalPercentage", _vipSurvivalPercentage);
-		writer.write("vipsSaved", _vipsSaved);
-		writer.write("vipsLost", _vipsLost);
-		writer.write("vipsWaitingOutside", _vipsWaitingOutside);
-		writer.write("vipsSavedScore", _vipsSavedScore);
-		writer.write("vipsLostScore", _vipsLostScore);
-		writer.write("vipsWaitingOutsideScore", _vipsWaitingOutsideScore);
+		node["vipEscapeType"] = (int)_vipEscapeType;
+		node["vipSurvivalPercentage"] = _vipSurvivalPercentage;
+		node["vipsSaved"] = _vipsSaved;
+		node["vipsLost"] = _vipsLost;
+		node["vipsWaitingOutside"] = _vipsWaitingOutside;
+		node["vipsSavedScore"] = _vipsSavedScore;
+		node["vipsLostScore"] = _vipsLostScore;
+		node["vipsWaitingOutsideScore"] = _vipsWaitingOutsideScore;
 	}
 	if (_objectivesNeeded)
 	{
-		writer.write("objectivesDestroyed", _objectivesDestroyed);
-		writer.write("objectivesNeeded", _objectivesNeeded);
-		writer.write("objectiveType", _objectiveType);
+		node["objectivesDestroyed"] = _objectivesDestroyed;
+		node["objectivesNeeded"] = _objectivesNeeded;
+		node["objectiveType"] = _objectiveType;
 	}
-	writer.write("width", _mapsize_x);
-	writer.write("length", _mapsize_y);
-	writer.write("height", _mapsize_z);
-	writer.write("missionType", _missionType);
-	writer.write("strTarget", _strTarget);
-	writer.write("strCraftOrBase", _strCraftOrBase).setAsQuoted();
+	node["width"] = _mapsize_x;
+	node["length"] = _mapsize_y;
+	node["height"] = _mapsize_z;
+	node["missionType"] = _missionType;
+	node["strTarget"] = _strTarget;
+	node["strCraftOrBase"] = _strCraftOrBase;
 	if (_startingCondition)
 	{
-		writer.write("startingConditionType", _startingCondition->getType());
+		node["startingConditionType"] = _startingCondition->getType();
 	}
 	if (_enviroEffects)
 	{
-		writer.write("enviroEffectsType", _enviroEffects->getType());
+		node["enviroEffectsType"] = _enviroEffects->getType();
 	}
-	writer.write("nameDisplay", _nameDisplay);
-	writer.write("ecEnabledFriendly", _ecEnabledFriendly);
-	writer.write("ecEnabledHostile", _ecEnabledHostile);
-	writer.write("ecEnabledNeutral", _ecEnabledNeutral);
-	writer.write("alienCustomDeploy", _alienCustomDeploy);
-	writer.write("alienCustomMission", _alienCustomMission);
-	writer.write("alienItemLevel", _alienItemLevel);
-	writer.write("lastUsedMapScript", _lastUsedMapScript);
-	writer.write("reinforcementsDeployment", _reinforcementsDeployment);
-	writer.write("reinforcementsRace", _reinforcementsRace);
-	writer.write("reinforcementsItemLevel", _reinforcementsItemLevel);
-	writer.write("reinforcementsMemory", _reinforcementsMemory);
-	writer.write("reinforcementsBlocks", _reinforcementsBlocks);
-	writer.write("flattenedMapTerrainNames", _flattenedMapTerrainNames);
-	writer.write("flattenedMapBlockNames", _flattenedMapBlockNames);
-	writer.write("globalshade", _globalShade);
-	writer.write("turn", _turn);
-	writer.write("bughuntMinTurn", _bughuntMinTurn);
-	writer.write("animFrame", _animFrame);
-	writer.write("bughuntMode", _bughuntMode);
-	writer.write("selectedUnit", (_selectedUnit ? _selectedUnit->getId() : -1));
-
-	writer.write("mapdatasets", _mapDataSets,
-		[](YAML::YamlNodeWriter& w, MapDataSet* mds)
-		{ w.write(mds->getName()); });
+	node["nameDisplay"] = _nameDisplay;
+	node["ecEnabledFriendly"] = _ecEnabledFriendly;
+	node["ecEnabledHostile"] = _ecEnabledHostile;
+	node["ecEnabledNeutral"] = _ecEnabledNeutral;
+	node["alienCustomDeploy"] = _alienCustomDeploy;
+	node["alienCustomMission"] = _alienCustomMission;
+	node["alienItemLevel"] = _alienItemLevel;
+	node["lastUsedMapScript"] = _lastUsedMapScript;
+	node["reinforcementsDeployment"] = _reinforcementsDeployment;
+	node["reinforcementsRace"] = _reinforcementsRace;
+	node["reinforcementsItemLevel"] = _reinforcementsItemLevel;
+	node["reinforcementsMemory"] = _reinforcementsMemory;
+	node["reinforcementsBlocks"] = _reinforcementsBlocks;
+	node["flattenedMapTerrainNames"] = _flattenedMapTerrainNames;
+	node["flattenedMapBlockNames"] = _flattenedMapBlockNames;
+	node["globalshade"] = _globalShade;
+	node["turn"] = _turn;
+	node["bughuntMinTurn"] = _bughuntMinTurn;
+	node["animFrame"] = _animFrame;
+	node["bughuntMode"] = _bughuntMode;
+	node["selectedUnit"] = (_selectedUnit?_selectedUnit->getId():-1);
+	for (const auto* mds : _mapDataSets)
+	{
+		node["mapdatasets"].push_back(mds->getName());
+	}
 #if 0
 	for (int i = 0; i < _mapsize_z * _mapsize_y * _mapsize_x; ++i)
 	{
@@ -548,73 +643,85 @@ void SavedBattleGame::save(YAML::YamlNodeWriter writer) const
 	}
 #else
 	// first, write out the field sizes we're going to use to write the tile data
-	writer.write("tileIndexSize", static_cast<char>(Tile::serializationKey.index)).setAsQuoted();
-	writer.write("tileTotalBytesPer", Tile::serializationKey.totalBytes);
-	writer.write("tileFireSize", static_cast<char>(Tile::serializationKey._fire)).setAsQuoted();
-	writer.write("tileSmokeSize", static_cast<char>(Tile::serializationKey._smoke)).setAsQuoted();
-	writer.write("tileIDSize", static_cast<char>(Tile::serializationKey._mapDataID)).setAsQuoted();
-	writer.write("tileSetIDSize", static_cast<char>(Tile::serializationKey._mapDataSetID)).setAsQuoted();
-	writer.write("tileBoolFieldsSize", static_cast<char>(Tile::serializationKey.boolFields)).setAsQuoted();
+	node["tileIndexSize"] = static_cast<char>(Tile::serializationKey.index);
+	node["tileTotalBytesPer"] = Tile::serializationKey.totalBytes;
+	node["tileFireSize"] = static_cast<char>(Tile::serializationKey._fire);
+	node["tileSmokeSize"] = static_cast<char>(Tile::serializationKey._smoke);
+	node["tileIDSize"] = static_cast<char>(Tile::serializationKey._mapDataID);
+	node["tileSetIDSize"] = static_cast<char>(Tile::serializationKey._mapDataSetID);
+	node["tileBoolFieldsSize"] = static_cast<char>(Tile::serializationKey.boolFields);
 
 	size_t tileDataSize = Tile::serializationKey.totalBytes * _mapsize_z * _mapsize_y * _mapsize_x;
 	Uint8* tileData = (Uint8*) calloc(tileDataSize, 1);
-	Uint8* ptr = tileData;
+	Uint8* w = tileData;
 
 	for (int i = 0; i < _mapsize_z * _mapsize_y * _mapsize_x; ++i)
 	{
 		if (!_tiles[i].isVoid())
 		{
-			serializeInt(&ptr, Tile::serializationKey.index, i);
-			_tiles[i].saveBinary(&ptr);
+			serializeInt(&w, Tile::serializationKey.index, i);
+			_tiles[i].saveBinary(&w);
 		}
 		else
 		{
 			tileDataSize -= Tile::serializationKey.totalBytes;
 		}
 	}
-	writer.write("totalTiles", tileDataSize / Tile::serializationKey.totalBytes); // not strictly necessary, just convenient
-	writer.writeBase64("binTiles", (char*)tileData, tileDataSize);
+	node["totalTiles"] = tileDataSize / Tile::serializationKey.totalBytes; // not strictly necessary, just convenient
+	node["binTiles"] = YAML::Binary(tileData, tileDataSize);
 	free(tileData);
 #endif
-
-	writer.write("nodes", _nodes,
-		[](YAML::YamlNodeWriter& w, Node* n)
-		{ n->save(w.write()); });
+	for (const auto* nn : _nodes)
+	{
+		node["nodes"].push_back(nn->save());
+	}
 	if (_missionType == "STR_BASE_DEFENSE")
-		writer.write("moduleMap", _baseModules);
-	writer.write("units", _units,
-		[&](YAML::YamlNodeWriter& w, BattleUnit* bu)
-		{ bu->save(w.write(), this->getMod()->getScriptGlobal()); });
-	writer.write("items", _items,
-		[&](YAML::YamlNodeWriter& w, BattleItem* bi)
-		{ if (!bi->isSpecialWeapon()) bi->save(w.write(), this->getMod()->getScriptGlobal()); });
-	writer.write("itemsSpecial", _items,
-		[&](YAML::YamlNodeWriter& w, BattleItem* bi)
-		{ if (bi->isSpecialWeapon()) bi->save(w.write(), this->getMod()->getScriptGlobal()); });
-	writer.write("tuReserved", (int)_tuReserved);
-	writer.write("kneelReserved", _kneelReserved);
-	writer.write("depth", _depth);
-	writer.write("ambience", _ambience);
-	writer.write("ambientVolume", _ambientVolume);
-	writer.write("ambienceRandom", _ambienceRandom);
-	writer.write("minAmbienceRandomDelay", _minAmbienceRandomDelay);
-	writer.write("maxAmbienceRandomDelay", _maxAmbienceRandomDelay);
-	writer.write("currentAmbienceDelay", _currentAmbienceDelay);
-	writer.write("recoverGuaranteed", _recoverGuaranteed,
-		[&](YAML::YamlNodeWriter& w, BattleItem* bi)
-		{ bi->save(w.write(), this->getMod()->getScriptGlobal()); });
-	writer.write("recoverConditional", _recoverConditional,
-		[&](YAML::YamlNodeWriter& w, BattleItem* bi)
-		{ bi->save(w.write(), this->getMod()->getScriptGlobal()); });
-	writer.write("music", _music);
-	_baseItems->save(writer["baseItems"]);
-	writer.write("turnLimit", _turnLimit);
-	writer.write("chronoTrigger", _chronoTrigger);
-	writer.write("cheatTurn", _cheatTurn);
-	writer.write("togglePersonalLight", _togglePersonalLight);
-	writer.write("toggleNightVision", _toggleNightVision);
-	writer.write("toggleBrightness", _toggleBrightness);
-	_scriptValues.save(writer, _rule->getScriptGlobal());
+	{
+		node["moduleMap"] = _baseModules;
+	}
+	for (const auto* bu : _units)
+	{
+		node["units"].push_back(bu->save(this->getMod()->getScriptGlobal()));
+	}
+	for (const auto* bi : _items)
+	{
+		if (bi->isSpecialWeapon())
+		{
+			node["itemsSpecial"].push_back(bi->save(this->getMod()->getScriptGlobal()));
+		}
+		else
+		{
+			node["items"].push_back(bi->save(this->getMod()->getScriptGlobal()));
+		}
+	}
+	node["tuReserved"] = (int)_tuReserved;
+	node["kneelReserved"] = _kneelReserved;
+	node["depth"] = _depth;
+	node["ambience"] = _ambience;
+	node["ambientVolume"] = _ambientVolume;
+	node["ambienceRandom"] = _ambienceRandom;
+	node["minAmbienceRandomDelay"] = _minAmbienceRandomDelay;
+	node["maxAmbienceRandomDelay"] = _maxAmbienceRandomDelay;
+	node["currentAmbienceDelay"] = _currentAmbienceDelay;
+	for (const auto* bi : _recoverGuaranteed)
+	{
+		node["recoverGuaranteed"].push_back(bi->save(this->getMod()->getScriptGlobal()));
+	}
+	for (const auto* bi : _recoverConditional)
+	{
+		node["recoverConditional"].push_back(bi->save(this->getMod()->getScriptGlobal()));
+	}
+	node["music"] = _music;
+	node["baseItems"] = _baseItems->save();
+	node["turnLimit"] = _turnLimit;
+	node["chronoTrigger"] = int(_chronoTrigger);
+	node["cheatTurn"] = _cheatTurn;
+	node["togglePersonalLight"] = _togglePersonalLight;
+	node["toggleNightVision"] = _toggleNightVision;
+	node["toggleBrightness"] = _toggleBrightness;
+	_scriptValues.save(node, _rule->getScriptGlobal());
+
+	return node;
 }
 
 /**
@@ -1883,18 +1990,12 @@ void SavedBattleGame::initUnit(BattleUnit *unit, size_t itemLevel)
 		auto& buildin = rule->getBuiltInWeapons();
 		if (!buildin.empty())
 		{
-			int idx = itemLevel >= buildin.size() ? buildin.size() - 1 : itemLevel;
+			if (itemLevel >= buildin.size())
+			{
+				itemLevel = buildin.size() -1;
+			}
 			// Built in weapons: the unit has this weapon regardless of loadout or what have you.
-			addFixedItems(unit, buildin.at(idx));
-		}
-
-		auto& buildin2 = rule->getWeightedBuiltInWeapons();
-		if (!buildin2.empty())
-		{
-			int idx2 = itemLevel >= buildin2.size() ? buildin2.size() - 1 : itemLevel;
-			auto* weights = buildin2.at(idx2);
-			auto* weaponSetRule = _rule->getWeaponSet(weights->choose());
-			addFixedItems(unit, weaponSetRule->getWeapons());
+			addFixedItems(unit, buildin.at(itemLevel));
 		}
 
 		// terrorist alien's equipment is a special case - they are fitted with a weapon which is the alien's name with suffix _WEAPON

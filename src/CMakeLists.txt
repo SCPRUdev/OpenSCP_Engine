@@ -86,7 +86,6 @@ set ( battlescape_src
   Battlescape/CommendationState.cpp
   Battlescape/ConfirmEndMissionState.cpp
   Battlescape/DebriefingState.cpp
-  Battlescape/ExperienceOverviewState.cpp
   Battlescape/Explosion.cpp
   Battlescape/ExplosionBState.cpp
   Battlescape/ExtendedBattlescapeLinksState.cpp
@@ -111,7 +110,6 @@ set ( battlescape_src
   Battlescape/Pathfinding.cpp
   Battlescape/PathfindingNode.cpp
   Battlescape/PathfindingOpenSet.cpp
-  Battlescape/Position.cpp
   Battlescape/PrimeGrenadeState.cpp
   Battlescape/Projectile.cpp
   Battlescape/ProjectileFlyBState.cpp
@@ -173,7 +171,6 @@ set ( engine_src
   Engine/SurfaceSet.cpp
   Engine/Timer.cpp
   Engine/Unicode.cpp
-  Engine/Yaml.cpp
   Engine/Zoom.cpp
 )
 
@@ -338,7 +335,6 @@ set ( mod_src
   Mod/RuleTerrain.cpp
   Mod/RuleUfo.cpp
   Mod/RuleVideo.cpp
-  Mod/RuleWeaponSet.cpp
   Mod/SoldierNamePool.cpp
   Mod/SoundDefinition.cpp
   Mod/StatString.cpp
@@ -414,27 +410,6 @@ set ( ufopedia_src
   Ufopaedia/UfopaediaStartState.cpp
 )
 
-set ( rapidyaml_src
-  ../libs/rapidyaml/c4/base64.cpp
-  ../libs/rapidyaml/c4/char_traits.cpp
-  ../libs/rapidyaml/c4/error.cpp
-  ../libs/rapidyaml/c4/format.cpp
-  ../libs/rapidyaml/c4/language.cpp
-  ../libs/rapidyaml/c4/memory_resource.cpp
-  ../libs/rapidyaml/c4/memory_util.cpp
-  ../libs/rapidyaml/c4/utf.cpp
-  ../libs/rapidyaml/c4/yml/common.cpp
-  ../libs/rapidyaml/c4/yml/node.cpp
-  ../libs/rapidyaml/c4/yml/node_type.cpp
-  ../libs/rapidyaml/c4/yml/parse.cpp
-  ../libs/rapidyaml/c4/yml/preprocess.cpp
-  ../libs/rapidyaml/c4/yml/reference_resolver.cpp
-  ../libs/rapidyaml/c4/yml/tag.cpp
-  ../libs/rapidyaml/c4/yml/tree.cpp
-  ../libs/rapidyaml/c4/yml/version.cpp
-
-)
-
 set ( cxx_src
     ${root_src}
     ${basescape_src}
@@ -446,7 +421,6 @@ set ( cxx_src
     ${mod_src}
     ${savegame_src}
     ${ufopedia_src}
-    ${rapidyaml_src}
 )
 
 set ( c_src

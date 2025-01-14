@@ -1573,7 +1573,7 @@ void TechTreeViewerState::handleManufactureData()
 		// person joining
 		std::ostringstream name;
 		name << "  ";
-		if (!rule->getSpawnedSoldierTemplate().yaml.empty())
+		if (!rule->getSpawnedSoldierTemplate().IsNull())
 		{
 			name << "*";
 		}

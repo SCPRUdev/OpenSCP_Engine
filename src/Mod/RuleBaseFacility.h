@@ -21,7 +21,7 @@
 #include <vector>
 #include <map>
 #include <bitset>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "RuleBaseFacilityFunctions.h"
 
 namespace OpenXcom
@@ -37,11 +37,9 @@ enum BasePlacementErrors : int;
 struct CraftOption
 {
 	/// Horizontal offset for rendering craft in the facility.
-
-	int x = 2;
+	int x = 0;
 	/// Vertical offset for rendering craft in the facility.
-	int y = -4;
-
+	int y = 0;
 	/// Minimum size of craft that can be housed in the slot.
 	int min = 0;
 	/// Maximum size of craft that can be housed in the slot.
@@ -49,17 +47,22 @@ struct CraftOption
 	/// Is craft hidden or rendered in the base in the slot.
 	bool hide = false;
 	/// Constructor with default parameters. Needed for YAML.
-
-	CraftOption() = default;
+	CraftOption()
+	{
+		hide = false;
+		min = 0;
+		max = 0;
+		x = 0;
+		y = 0;
+	}
 	/// Constructor that allows to define facility craft slots.
 	CraftOption(int xOffset, int yOffset, int minSize, int maxSize, bool isHidden)
 	{
-		x = xOffset;
-		y = yOffset;
+		hide = isHidden;
 		min = minSize;
 		max = maxSize;
-		hide = isHidden;
-
+		x = xOffset;
+		y = yOffset;
 	}
 };
 
@@ -123,7 +126,7 @@ public:
 	/// Cleans up the facility ruleset.
 	~RuleBaseFacility();
 	/// Loads the facility from YAML.
-	void load(const YAML::YamlNodeReader& reader, Mod *mod);
+	void load(const YAML::Node& node, Mod *mod);
 	/// Cross link with other rules.
 	void afterLoad(const Mod* mod);
 	/// Gets the facility's type.
@@ -263,9 +266,6 @@ public:
 	/// Gets the ruleset for the destroyed version of this facility.
 	const RuleBaseFacility* getDestroyedFacility() const;
 };
-
-// helper overloads for deserialization-only
-bool read(ryml::ConstNodeRef const& n, CraftOption* val);
 
 }
 

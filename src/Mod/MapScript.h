@@ -19,7 +19,7 @@
  */
 #include <vector>
 #include <string>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include <SDL_video.h>
 #include "MapBlock.h"
 #include "../Engine/Logger.h"
@@ -67,9 +67,9 @@ struct VerticalLevel
 	}
 
 	// Load in the data for a VerticalLevel from a YAML file, has to load similar data to a full mapscript command
-	void load(const YAML::YamlNodeReader& reader)
+	void load(const YAML::Node &node)
 	{
-		std::string type = reader["type"].readVal<std::string>("");
+		std::string type = node["type"].as<std::string>("");
 		if (type == "ground")
 		{
 			levelType = VLT_GROUND;
@@ -105,15 +105,15 @@ struct VerticalLevel
 			levelType = VLT_MIDDLE;
 		}
 
-		if (const auto& map = reader["size"])
+		if (const YAML::Node &map = node["size"])
 		{
-			if (map.isSeq())
+			if (map.Type() == YAML::NodeType::Sequence)
 			{
 				int *sizes[3] = {&levelSizeX, &levelSizeY, &levelSizeZ};
 				int entry = 0;
-				for (const auto& size : map.children())
+				for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 				{
-					*sizes[entry] = size.readVal(1);
+					*sizes[entry] = (*i).as<int>(1);
 					entry++;
 					if (entry == 3)
 					{
@@ -123,47 +123,47 @@ struct VerticalLevel
 			}
 			else
 			{
-				map.tryReadVal(levelSizeX);
+				levelSizeX = map.as<int>(levelSizeX);
 				levelSizeY = levelSizeX;
 			}
 		}
 
-		reader.tryRead("maxRepeats", maxRepeats);
+		maxRepeats = node["maxRepeats"].as<int>(maxRepeats);
 
-		if (const auto& map = reader["groups"])
+		if (const YAML::Node &map = node["groups"])
 		{
 			levelGroups.clear();
-			if (map.isSeq())
+			if (map.Type() == YAML::NodeType::Sequence)
 			{
-				for (const auto& group : map.children())
+				for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 				{
-					levelGroups.push_back(group.readVal(0));
+					levelGroups.push_back((*i).as<int>(0));
 				}
 			}
 			else
 			{
-				levelGroups.push_back(map.readVal(0));
+				levelGroups.push_back(map.as<int>(0));
 			}
 		}
 
-		if (const auto& map = reader["blocks"])
+		if (const YAML::Node &map = node["blocks"])
 		{
 			levelGroups.clear();
-			if (map.isSeq())
+			if (map.Type() == YAML::NodeType::Sequence)
 			{
-				for (const auto& block : map.children())
+				for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 				{
-					levelBlocks.push_back(block.readVal(0));
+					levelBlocks.push_back((*i).as<int>(0));
 				}
 			}
 			else
 			{
-				levelBlocks.push_back(map.readVal(0));
+				levelBlocks.push_back(map.as<int>(0));
 			}
 
 		}
 
-		reader.tryRead("terrain", levelTerrain);
+		levelTerrain = node["terrain"].as<std::string>(levelTerrain);
 	}
 };
 
@@ -192,7 +192,7 @@ public:
 	MapScript();
 	~MapScript();
 	/// Loads information from a ruleset file.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Initializes all the variables and junk for a mapscript command.
 	void init();
 	/// Initializes the variables for a mapscript command from a VerticalLevel

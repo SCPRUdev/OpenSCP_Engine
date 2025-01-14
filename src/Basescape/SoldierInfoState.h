@@ -42,7 +42,6 @@ private:
 	size_t _soldierId;
 	bool _forceLimits;
 	bool _readOnly;
-	bool _noTransformations;
 	Soldier *_soldier;
 	std::vector<Soldier*> *_list;
 

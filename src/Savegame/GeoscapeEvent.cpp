@@ -37,23 +37,26 @@ GeoscapeEvent::~GeoscapeEvent()
  * Loads the event from YAML.
  * @param node The YAML node containing the data.
  */
-void GeoscapeEvent::load(const YAML::YamlNodeReader& reader)
+void GeoscapeEvent::load(const YAML::Node &node)
 {
-	reader.tryRead("spawnCountdown", _spawnCountdown);
-	reader.tryRead("over", _over);
+	_spawnCountdown = node["spawnCountdown"].as<size_t>(_spawnCountdown);
+	_over = node["over"].as<bool>(_over);
 }
 
 /**
  * Saves the event to YAML.
  * @return YAML node.
  */
-void GeoscapeEvent::save(YAML::YamlNodeWriter writer) const
+YAML::Node GeoscapeEvent::save() const
 {
-	writer.setAsMap();
-	writer.write("name", _rule.getName());
-	writer.write("spawnCountdown", _spawnCountdown);
+	YAML::Node node;
+	node["name"] = _rule.getName();
+	node["spawnCountdown"] = _spawnCountdown;
 	if (_over)
-		writer.write("over", _over);
+	{
+		node["over"] = _over;
+	}
+	return node;
 }
 
 /**

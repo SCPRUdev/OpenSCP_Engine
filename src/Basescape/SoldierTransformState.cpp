@@ -112,7 +112,7 @@ SoldierTransformState::SoldierTransformState(Base* base, size_t soldier) : _base
 
 	_btnQuickSearch->setText(""); // redraw
 	_btnQuickSearch->onEnter((ActionHandler)&SoldierTransformState::btnQuickSearchApply);
-	_btnQuickSearch->setVisible(Options::oxceQuickSearchButton);
+	_btnQuickSearch->setVisible(false);
 
 	_btnCancel->onKeyboardRelease((ActionHandler)&SoldierTransformState::btnQuickSearchToggle, Options::keyToggleQuickSearch);
 

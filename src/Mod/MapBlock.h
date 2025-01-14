@@ -19,7 +19,7 @@
  */
 #include <string>
 #include <vector>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "../Battlescape/Position.h"
 
 namespace OpenXcom
@@ -67,7 +67,7 @@ public:
 	MapBlock(const std::string &name);
 	~MapBlock();
 	/// Loads the map block from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Gets the mapblock's name (used for MAP generation).
 	const std::string& getName() const;
 	/// Gets the mapblock's x size.
@@ -92,9 +92,5 @@ public:
 	const std::vector<ExtendedItems> *getExtendedItems() const { return &_extendedItems; }
 
 };
-
-// helper overloads for deserialization-only
-bool read(ryml::ConstNodeRef const& n, RandomizedItems* val);
-bool read(ryml::ConstNodeRef const& n, ExtendedItems* val);
 
 }

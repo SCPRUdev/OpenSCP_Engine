@@ -36,7 +36,6 @@ private:
 	BattleType _compatibleBattleType;
 	bool _isPsiRequired;
 	bool _checkHandsOnly;
-	bool _checkHandsOnly2;
 	RuleItemUseCost _cost;
 	RuleItemUseCost _flat;
 	std::vector<std::string> _compatibleWeaponNames;
@@ -53,7 +52,7 @@ public:
 	/// Cleans up the soldier skill ruleset.
 	~RuleSkill() = default;
 	/// Loads the soldier skill data from YAML.
-	void load(const YAML::YamlNodeReader& reader, Mod *mod, const ModScript& parsers);
+	void load(const YAML::Node& node, Mod *mod, const ModScript& parsers);
 	/// Cross link with other rules.
 	void afterLoad(const Mod* mod);
 
@@ -67,8 +66,6 @@ public:
 	bool isPsiRequired() const { return _isPsiRequired; }
 	/// Should the check for compatible items only consider the hands (or also the inventory and specialweapon)?
 	bool checkHandsOnly() const { return _checkHandsOnly; }
-	/// Should the check for compatible items (by battle type) only consider the hands (or also the inventory and specialweapon)?
-	bool checkHandsOnly2() const { return _checkHandsOnly2; }
 	/// Gets the use cost for this skill.
 	const RuleItemUseCost& getCost() const { return _cost; }
 	/// Gets the flat vs. percentage cost flags for the use cost of this skill.

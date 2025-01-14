@@ -44,26 +44,29 @@ AlienRace::~AlienRace()
  * Loads the alien race from a YAML file.
  * @param node YAML node.
  */
-void AlienRace::load(const YAML::YamlNodeReader& reader, const Mod* mod)
+void AlienRace::load(const YAML::Node &node, const Mod* mod)
 {
-	if (const auto& parent = reader["refNode"])
+	if (const YAML::Node &parent = node["refNode"])
 	{
 		load(parent, mod);
 	}
 
-	reader.tryRead("baseCustomDeploy", _baseCustomDeploy);
-	reader.tryRead("baseCustomMission", _baseCustomMission);
-	reader.tryRead("members", _members);
-	reader.tryRead("membersRandom", _membersRandom);
-	reader.tryRead("retaliationAggression", _retaliationAggression);
+	_baseCustomDeploy = node["baseCustomDeploy"].as<std::string>(_baseCustomDeploy);
+	_baseCustomMission = node["baseCustomMission"].as<std::string>(_baseCustomMission);
+	_members = node["members"].as< std::vector<std::string> >(_members);
+	_membersRandom = node["membersRandom"].as< std::vector <std::vector<std::string> > >(_membersRandom);
+	_retaliationAggression = node["retaliationAggression"].as<int>(_retaliationAggression);
 
-	for (const auto& weights : reader["retaliationMissionWeights"].children())
+	if (const YAML::Node& weights = node["retaliationMissionWeights"])
 	{
-		WeightedOptions* nw = new WeightedOptions();
-		nw->load(weights);
-		_retaliationMissionDistribution.push_back(std::make_pair(weights.readKey<size_t>(0), nw));
+		for (YAML::const_iterator nn = weights.begin(); nn != weights.end(); ++nn)
+		{
+			WeightedOptions* nw = new WeightedOptions();
+			nw->load(nn->second);
+			_retaliationMissionDistribution.push_back(std::make_pair(nn->first.as<size_t>(0), nw));
+		}
 	}
-	reader.tryRead("listOrder", _listOrder);
+	_listOrder = node["listOrder"].as<int>(_listOrder);
 }
 
 /**

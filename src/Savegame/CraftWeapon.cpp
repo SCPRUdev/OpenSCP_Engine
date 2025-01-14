@@ -49,27 +49,27 @@ CraftWeapon::~CraftWeapon()
  * Loads the craft weapon from a YAML file.
  * @param node YAML node.
  */
-void CraftWeapon::load(const YAML::YamlNodeReader& reader)
+void CraftWeapon::load(const YAML::Node &node)
 {
-	reader.tryRead("ammo", _ammo);
-	reader.tryRead("rearming", _rearming);
-	reader.tryRead("disabled", _disabled);
+	_ammo = node["ammo"].as<int>(_ammo);
+	_rearming = node["rearming"].as<bool>(_rearming);
+	_disabled = node["disabled"].as<bool>(_disabled);
 }
 
 /**
  * Saves the base to a YAML file.
  * @return YAML node.
  */
-void CraftWeapon::save(YAML::YamlNodeWriter writer) const
+YAML::Node CraftWeapon::save() const
 {
-	writer.setAsMap();
-
-	writer.write("type", _rules->getType());
-	writer.write("ammo", _ammo);
+	YAML::Node node;
+	node["type"] = _rules->getType();
+	node["ammo"] = _ammo;
 	if (_rearming)
-		writer.write("rearming", _rearming);
+		node["rearming"] = _rearming;
 	if (_disabled)
-		writer.write("disabled", _disabled);
+		node["disabled"] = _disabled;
+	return node;
 }
 
 /**

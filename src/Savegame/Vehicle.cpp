@@ -43,22 +43,23 @@ Vehicle::~Vehicle()
  * Loads the vehicle from a YAML file.
  * @param node YAML node.
  */
-void Vehicle::load(const YAML::YamlNodeReader& reader)
+void Vehicle::load(const YAML::Node &node)
 {
-	reader.tryRead("ammo", _ammo);
-	reader.tryRead("size", _size);
+	_ammo = node["ammo"].as<int>(_ammo);
+	_size = node["size"].as<int>(_size);
 }
 
 /**
  * Saves the base to a YAML file.
  * @return YAML node.
  */
-void Vehicle::save(YAML::YamlNodeWriter writer) const
+YAML::Node Vehicle::save() const
 {
-	writer.setAsMap();
-	writer.write("type", _rules->getType());
-	writer.write("ammo", _ammo);
-	writer.write("size", _size);
+	YAML::Node node;
+	node["type"] = _rules->getType();
+	node["ammo"] = _ammo;
+	node["size"] = _size;
+	return node;
 }
 
 /**

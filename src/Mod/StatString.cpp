@@ -43,15 +43,15 @@ StatString::~StatString()
  * Loads the StatString from a YAML file.
  * @param node YAML node.
  */
-void StatString::load(const YAML::YamlNodeReader& reader)
+void StatString::load(const YAML::Node &node)
 {
 	std::string conditionNames[] = {"psiStrength", "psiSkill", "bravery", "strength", "firing", "reactions", "stamina", "tu", "health", "throwing", "melee", "psiTraining", "manaPool"};
-	reader.tryRead("string", _stringToBeAddedIfAllConditionsAreMet);
+	_stringToBeAddedIfAllConditionsAreMet = node["string"].as<std::string>(_stringToBeAddedIfAllConditionsAreMet);
 	for (size_t i = 0; i < std::size(conditionNames); i++)
 	{
-		if (const auto& conditionReader = reader[ryml::to_csubstr(conditionNames[i])])
+		if (node[conditionNames[i]])
 		{
-			_conditions.push_back(getCondition(conditionNames[i], conditionReader));
+			_conditions.push_back(getCondition(conditionNames[i], node));
 		}
 	}
 }
@@ -62,14 +62,18 @@ void StatString::load(const YAML::YamlNodeReader& reader)
  * @param node YAML node.
  * @return New StatStringCondition.
  */
-StatStringCondition *StatString::getCondition(const std::string &conditionName, const YAML::YamlNodeReader& conditionReader)
+StatStringCondition *StatString::getCondition(const std::string &conditionName, const YAML::Node &node)
 {
 	// These are the defaults from xcomutil
 	int minValue = 0, maxValue = 255;
-	if (conditionReader[0] && !conditionReader[0].hasNullVal())
-		conditionReader[0].tryReadVal(minValue);
-	if (conditionReader[1] && !conditionReader[1].hasNullVal())
-		conditionReader[1].tryReadVal(maxValue);
+	if (node[conditionName][0])
+	{
+		minValue = node[conditionName][0].as<int>(minValue);
+	}
+	if (node[conditionName][1])
+	{
+		maxValue = node[conditionName][1].as<int>(maxValue);
+	}
 	StatStringCondition *thisCondition = new StatStringCondition(conditionName, minValue, maxValue);
 	return thisCondition;
 }

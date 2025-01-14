@@ -18,7 +18,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <vector>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -41,9 +41,9 @@ public:
 	/// Cleans up the region.
 	~Region();
 	/// Loads the region from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Saves the region to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Gets the region's ruleset.
 	RuleRegion *getRules() const;
 	/// add xcom activity in this region

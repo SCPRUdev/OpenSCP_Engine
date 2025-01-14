@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -38,7 +38,7 @@ public:
 	/// Cleans up the MCD Patch.
 	~MCDPatch();
 	/// Loads the MCD Patch from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Applies an MCD patch to a mapDataSet
 	void modifyData(MapDataSet *dataSet) const;
 };

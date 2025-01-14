@@ -52,37 +52,38 @@ BaseFacility::~BaseFacility()
  * Loads the base facility from a YAML file.
  * @param node YAML node.
  */
-void BaseFacility::load(const YAML::YamlNodeReader& reader)
+void BaseFacility::load(const YAML::Node &node)
 {
-	reader.tryRead("x", _x);
-	reader.tryRead("y", _y);
-	reader.tryRead("buildTime", _buildTime);
-	reader.tryRead("ammo", _ammo);
-	reader.tryRead("ammoMissingReported", _ammoMissingReported);
-	reader.tryRead("disabled", _disabled);
-	reader.tryRead("hadPreviousFacility", _hadPreviousFacility);
+	_x = node["x"].as<int>(_x);
+	_y = node["y"].as<int>(_y);
+	_buildTime = node["buildTime"].as<int>(_buildTime);
+	_ammo = node["ammo"].as<int>(_ammo);
+	_ammoMissingReported = node["ammoMissingReported"].as<bool>(_ammoMissingReported);
+	_disabled = node["disabled"].as<bool>(_disabled);
+	_hadPreviousFacility = node["hadPreviousFacility"].as<bool>(_hadPreviousFacility);
 }
 
 /**
  * Saves the base facility to a YAML file.
  * @return YAML node.
  */
-void BaseFacility::save(YAML::YamlNodeWriter writer) const
+YAML::Node BaseFacility::save() const
 {
-	writer.setAsMap();
-	writer.write("type", _rules->getType());
-	writer.write("x", _x);
-	writer.write("y", _y);
+	YAML::Node node;
+	node["type"] = _rules->getType();
+	node["x"] = _x;
+	node["y"] = _y;
 	if (_buildTime != 0)
-		writer.write("buildTime", _buildTime);
+		node["buildTime"] = _buildTime;
 	if (_ammo != 0)
-		writer.write("ammo", _ammo);
+		node["ammo"] = _ammo;
 	if (_ammoMissingReported)
-		writer.write("ammoMissingReported", _ammoMissingReported);
+		node["ammoMissingReported"] = _ammoMissingReported;
 	if (_disabled)
-		writer.write("disabled", _disabled);
+		node["disabled"] = _disabled;
 	if (_hadPreviousFacility)
-		writer.write("hadPreviousFacility", _hadPreviousFacility);
+		node["hadPreviousFacility"] = _hadPreviousFacility;
+	return node;
 }
 
 /**

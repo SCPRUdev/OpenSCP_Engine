@@ -34,7 +34,6 @@
 #include "../Engine/RNG.h"
 #include "../Battlescape/Particle.h"
 #include "../fmath.h"
-#include <optional>
 
 namespace OpenXcom
 {
@@ -103,101 +102,110 @@ BattleItem::~BattleItem()
  * @param node YAML node.
  * @param mod Mod for the item.
  */
-void BattleItem::load(const YAML::YamlNodeReader& reader, Mod *mod, const ScriptGlobal *shared)
+void BattleItem::load(const YAML::Node &node, Mod *mod, const ScriptGlobal *shared)
 {
-	if (const auto& cost = reader["inventoryMoveCost"])
-		_inventoryMoveCostPercent = cost["basePercent"].readVal(_inventoryMoveCostPercent);
-	std::string slot = reader["inventoryslot"].readVal<std::string>("NULL");
+	if (const YAML::Node& cost = node["inventoryMoveCost"])
+	{
+		_inventoryMoveCostPercent = cost["basePercent"].as<int>(_inventoryMoveCostPercent);
+	}
+	std::string slot = node["inventoryslot"].as<std::string>("NULL");
 	if (slot != "NULL")
 	{
-		_inventorySlot = mod->getInventory(slot);
-		if (!_inventorySlot)
+		if (mod->getInventory(slot))
+		{
+			_inventorySlot = mod->getInventory(slot);
+
+		}
+		else
+		{
 			_inventorySlot = mod->getInventoryGround();
+		}
 	}
-	reader.tryRead("inventoryX", _inventoryX);
-	reader.tryRead("inventoryY", _inventoryY);
-	reader.tryRead("ammoqty", _ammoQuantity);
-	reader.tryRead("painKiller", _painKiller);
-	reader.tryRead("heal", _heal);
-	reader.tryRead("stimulant", _stimulant);
-	//reader.tryRead("fuseTimer", _fuseTimer);
-	if (const auto& fuseTimer = reader["fuseTimer"]) // needed for compatibility with OXC
-		setFuseTimer(fuseTimer.readVal<int>());
-	reader.tryRead("fuseEnabed", _fuseEnabled);
-	reader.tryRead("droppedOnAlienTurn", _droppedOnAlienTurn);
-	reader.tryRead("XCOMProperty", _XCOMProperty);
-	_scriptValues.load(reader, shared);
+	_inventoryX = node["inventoryX"].as<int>(_inventoryX);
+	_inventoryY = node["inventoryY"].as<int>(_inventoryY);
+	_ammoQuantity = node["ammoqty"].as<int>(_ammoQuantity);
+	_painKiller = node["painKiller"].as<int>(_painKiller);
+	_heal = node["heal"].as<int>(_heal);
+	_stimulant = node["stimulant"].as<int>(_stimulant);
+	//_fuseTimer = node["fuseTimer"].as<int>(_fuseTimer);
+	if (node["fuseTimer"])
+	{
+		// needed for compatibility with OXC
+		setFuseTimer(node["fuseTimer"].as<int>());
+	}
+	_fuseEnabled = node["fuseEnabed"].as<bool>(_fuseEnabled);
+	_droppedOnAlienTurn = node["droppedOnAlienTurn"].as<bool>(_droppedOnAlienTurn);
+	_XCOMProperty = node["XCOMProperty"].as<bool>(_XCOMProperty);
+	_scriptValues.load(node, shared);
 }
 
 /**
  * Saves the item to a YAML file.
  * @return YAML node.
  */
-void BattleItem::save(YAML::YamlNodeWriter writer, const ScriptGlobal *shared) const
+YAML::Node BattleItem::save(const ScriptGlobal *shared) const
 {
-	writer.setAsMap();
-	writer.write("id", _id);
-	writer.write("type", _rules->getType());
+	YAML::Node node;
+	node["id"] = _id;
+	node["type"] = _rules->getType();
 	if (_owner)
-		writer.write("owner", _owner->getId());
+		node["owner"] = _owner->getId();
 	if (_previousOwner)
-		writer.write("previousOwner", _previousOwner->getId());
+		node["previousOwner"] = _previousOwner->getId();
 	if (_unit)
-		writer.write("unit", _unit->getId());
+		node["unit"] = _unit->getId();
+
 	if (_inventoryMoveCostPercent != _rules->getInventoryMoveCostPercent())
 	{
-		auto mcWriter = writer["inventoryMoveCost"];
-		mcWriter.setAsMap();
-		mcWriter.write("basePercent", _inventoryMoveCostPercent);
+		node["inventoryMoveCost"]["basePercent"] = _inventoryMoveCostPercent;
 	}
 	if (_inventorySlot)
 	{
-		writer.write("inventoryslot", _inventorySlot->getId());
+		node["inventoryslot"] = _inventorySlot->getId();
 		if (_inventorySlot->getType() == INV_SLOT) // only for slot items this matter, for hands and ground it can be `0` for both
 		{
-			writer.write("inventoryX", _inventoryX);
-			writer.write("inventoryY", _inventoryY);
+			node["inventoryX"] = _inventoryX;
+			node["inventoryY"] = _inventoryY;
 		}
 	}
+
 	if (_tile)
-		writer.write("position", _tile->getPosition());
+		node["position"] = _tile->getPosition();
 	if (_ammoQuantity)
-		writer.write("ammoqty", _ammoQuantity);
+		node["ammoqty"] = _ammoQuantity;
 	if (_ammoItem[0])
-		writer.write("ammoItem", _ammoItem[0]->getId());
-	std::optional<YAML::YamlNodeWriter> ammoSlotWriter;
+	{
+		node["ammoItem"] = _ammoItem[0]->getId();
+	}
 	Collections::untilLastIf(
 		_ammoItem,
-		[](BattleItem* i)
+		[](BattleItem *i)
 		{
 			return i != nullptr;
 		},
-		[&](BattleItem* i)
+		[&](BattleItem *i)
 		{
-			if (!ammoSlotWriter.has_value())
-			{
-				ammoSlotWriter.emplace(writer["ammoItemSlots"]);
-				ammoSlotWriter->setAsSeq();
-				ammoSlotWriter->setFlowStyle();
-			}
-			ammoSlotWriter->write(i ? i->getId() : -1);
-		});
+			node["ammoItemSlots"].SetStyle(YAML::EmitterStyle::Flow); // called multiple times but prevent creating empty `ammoItemSlots: ~`
+			node["ammoItemSlots"].push_back(i ? i->getId() : -1);
+		}
+	);
 	if (_rules && _rules->getBattleType() == BT_MEDIKIT)
 	{
-		writer.write("painKiller", _painKiller);
-		writer.write("heal", _heal);
-		writer.write("stimulant", _stimulant);
+		node["painKiller"] = _painKiller;
+		node["heal"] = _heal;
+		node["stimulant"] = _stimulant;
 	}
 	if (_fuseTimer != -1)
-		writer.write("fuseTimer", _fuseTimer);
+		node["fuseTimer"] = _fuseTimer;
 	if (_fuseEnabled)
-		writer.write("fuseEnabed", _fuseEnabled);
+		node["fuseEnabed"] = _fuseEnabled;
 	if (_droppedOnAlienTurn)
-		writer.write("droppedOnAlienTurn", _droppedOnAlienTurn);
+		node["droppedOnAlienTurn"] = _droppedOnAlienTurn;
 	if (_XCOMProperty)
-		writer.write("XCOMProperty", _XCOMProperty);
+		node["XCOMProperty"] = _XCOMProperty;
+	_scriptValues.save(node, shared);
 
-	_scriptValues.save(writer, shared);
+	return node;
 }
 
 /**
@@ -1400,8 +1408,8 @@ std::string debugDisplayScript(const BattleItem* bt)
 		auto* rule = bt->getRules();
 		std::string s;
 		s += BattleItem::ScriptName;
-		s += "(type: \"";
-		s += rule->getType();
+		s += "(name: \"";
+		s += rule->getName();
 		s += "\" id: ";
 		s += std::to_string(bt->getId());
 

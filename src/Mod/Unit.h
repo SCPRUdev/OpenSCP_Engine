@@ -19,10 +19,9 @@
  */
 #include <string>
 #include <vector>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include <SDL_types.h>
 #include "../Engine/RNG.h"
-#include "../Savegame/WeightedOptions.h"
 
 namespace OpenXcom
 {
@@ -430,7 +429,7 @@ private:
 	std::string _civilianRecoveryTypeName, _spawnedPersonName, _liveAlienName;
 	const RuleSoldier* _civilianRecoverySoldierType = nullptr;
 	const RuleItem* _civilianRecoveryItemType = nullptr;
-	YAML::YamlString _spawnedSoldier;
+	YAML::Node _spawnedSoldier;
 	std::string _race;
 	int _showFullNameInAlienInventory;
 	std::string _rank;
@@ -450,7 +449,6 @@ private:
 	std::string _meleeWeapon, _psiWeapon;
 	std::vector<std::vector<std::string> > _builtInWeaponsNames;
 	std::vector<std::vector<const RuleItem*> > _builtInWeapons;
-	std::vector<WeightedOptions*> _weightedBuiltInWeapons;
 	bool _capturable;
 	bool _canSurrender, _autoSurrender;
 	bool _isLeeroyJenkins;
@@ -469,7 +467,7 @@ public:
 	/// Cleans up the unit ruleset.
 	~Unit();
 	/// Loads the unit data from YAML.
-	void load(const YAML::YamlNodeReader& reader, Mod *mod);
+	void load(const YAML::Node& node, Mod *mod);
 	/// Cross link with other rules.
 	void afterLoad(const Mod* mod);
 
@@ -489,7 +487,7 @@ public:
 	/// Gets the custom name of the "spawned person".
 	const std::string &getSpawnedPersonName() const { return _spawnedPersonName; }
 	/// Gets the spawned soldier template.
-	const YAML::YamlString &getSpawnedSoldierTemplate() const { return _spawnedSoldier; }
+	const YAML::Node &getSpawnedSoldierTemplate() const { return _spawnedSoldier; }
 
 	/// Gets the unit's stats.
 	UnitStats *getStats();
@@ -551,8 +549,6 @@ public:
 	const std::string &getPsiWeapon() const;
 	/// Gets a vector of integrated items this unit has available.
 	const std::vector<std::vector<const RuleItem*> > &getBuiltInWeapons() const;
-	/// Gets a vector of integrated item options this unit has available.
-	const std::vector<WeightedOptions*>& getWeightedBuiltInWeapons() const { return _weightedBuiltInWeapons; }
 	/// Gets whether the alien can be captured alive.
 	bool getCapturable() const;
 	/// Checks if this unit can surrender.
@@ -587,8 +583,49 @@ public:
 	static void ScriptRegister(ScriptParserBase* parser);
 };
 
-// helper overloads for (de)serialization
-bool read(ryml::ConstNodeRef const& n, UnitStats* val);
-void write(ryml::NodeRef* n, UnitStats const& val);
+}
 
+namespace YAML
+{
+	template<>
+	struct convert<OpenXcom::UnitStats>
+	{
+		static Node encode(const OpenXcom::UnitStats& rhs)
+		{
+			Node node;
+			node["tu"] = rhs.tu;
+			node["stamina"] = rhs.stamina;
+			node["health"] = rhs.health;
+			node["bravery"] = rhs.bravery;
+			node["reactions"] = rhs.reactions;
+			node["firing"] = rhs.firing;
+			node["throwing"] = rhs.throwing;
+			node["strength"] = rhs.strength;
+			node["psiStrength"] = rhs.psiStrength;
+			node["psiSkill"] = rhs.psiSkill;
+			node["melee"] = rhs.melee;
+			node["mana"] = rhs.mana;
+			return node;
+		}
+
+		static bool decode(const Node& node, OpenXcom::UnitStats& rhs)
+		{
+			if (!node.IsMap())
+				return false;
+
+			rhs.tu = node["tu"].as<int>(rhs.tu);
+			rhs.stamina = node["stamina"].as<int>(rhs.stamina);
+			rhs.health = node["health"].as<int>(rhs.health);
+			rhs.bravery = node["bravery"].as<int>(rhs.bravery);
+			rhs.reactions = node["reactions"].as<int>(rhs.reactions);
+			rhs.firing = node["firing"].as<int>(rhs.firing);
+			rhs.throwing = node["throwing"].as<int>(rhs.throwing);
+			rhs.strength = node["strength"].as<int>(rhs.strength);
+			rhs.psiStrength = node["psiStrength"].as<int>(rhs.psiStrength);
+			rhs.psiSkill = node["psiSkill"].as<int>(rhs.psiSkill);
+			rhs.melee = node["melee"].as<int>(rhs.melee);
+			rhs.mana = node["mana"].as<int>(rhs.mana);
+			return true;
+		}
+	};
 }

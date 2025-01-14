@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "../Mod/RuleBaseFacility.h"
 
 namespace OpenXcom
@@ -52,9 +52,9 @@ public:
 	/// Cleans up the base facility.
 	~BaseFacility();
 	/// Loads the base facility from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Saves the base facility to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Gets the facility's ruleset.
 	const RuleBaseFacility *getRules() const;
 	/// Gets the facility's X position.

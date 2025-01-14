@@ -57,7 +57,7 @@ namespace OpenXcom
  * @param soldierId ID of the selected soldier.
  */
 SoldierInfoState::SoldierInfoState(Base *base, size_t soldierId, bool forceLimits, bool readOnly) :
-	_base(base), _soldierId(soldierId), _forceLimits(forceLimits), _readOnly(readOnly), _noTransformations(false), _soldier(0)
+	_base(base), _soldierId(soldierId), _forceLimits(forceLimits), _readOnly(readOnly), _soldier(0)
 {
 	if (_base == 0)
 	{
@@ -294,9 +294,9 @@ SoldierInfoState::SoldierInfoState(Base *base, size_t soldierId, bool forceLimit
 	{
 		_game->getSavedGame()->getAvailableTransformations(availableTransformations, _game->getMod(), _base);
 	}
-	if (availableTransformations.empty())
+	if (_readOnly || availableTransformations.empty())
 	{
-		_noTransformations = true;
+		_btnTransformations->setVisible(false);
 	}
 
 	_edtSoldier->setBig();
@@ -482,10 +482,7 @@ void SoldierInfoState::init()
 
 	_btnArmor->setText(wsArmor);
 
-	bool showNastyButtons = !_readOnly && _game->getSavedGame()->getMonthsPassed() > -1 && !(_soldier->getCraft() && _soldier->getCraft()->getStatus() == "STR_OUT");
-
-	_btnSack->setVisible(showNastyButtons);
-	_btnTransformations->setVisible(showNastyButtons && !_noTransformations);
+	_btnSack->setVisible(!_readOnly && _game->getSavedGame()->getMonthsPassed() > -1 && !(_soldier->getCraft() && _soldier->getCraft()->getStatus() == "STR_OUT"));
 
 	_txtRank->setText(tr("STR_RANK_").arg(tr(_soldier->getRankString())));
 

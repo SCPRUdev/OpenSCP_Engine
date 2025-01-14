@@ -19,7 +19,7 @@
  */
 #include <string>
 #include <vector>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "../Engine/Exception.h"
 
 namespace OpenXcom
@@ -77,7 +77,7 @@ namespace OpenXcom
 		/// Gets the type of article definition.
 		UfopaediaTypeId getType() const;
 		/// Loads the article from YAML.
-		virtual void load(const YAML::YamlNodeReader& reader, int listOrder);
+		virtual void load(const YAML::Node& node, int listOrder);
 		/// Gets the article's list weight.
 		int getListOrder() const;
 
@@ -173,7 +173,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionCraft();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 		std::string image_id;
 		ArticleDefinitionRect rect_stats;
@@ -191,7 +191,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionCraftWeapon();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 		std::string image_id;
 	};
@@ -206,7 +206,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionText();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 	};
 
@@ -221,7 +221,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionTextImage();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 		std::string image_id;
 		int text_width;
@@ -240,7 +240,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionTFTD();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 		std::string image_id;
 		int text_width;
@@ -258,7 +258,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionBaseFacility();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 	};
 
@@ -273,7 +273,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionItem();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 		std::string weapon;
 	};
@@ -289,7 +289,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionUfo();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 	};
 
@@ -304,7 +304,7 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionArmor();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 		std::string image_id;
 	};
@@ -320,12 +320,10 @@ namespace OpenXcom
 		/// Constructor.
 		ArticleDefinitionVehicle();
 		/// Loads the article from YAML.
-		void load(const YAML::YamlNodeReader& reader, int listOrder) override;
+		void load(const YAML::Node& node, int listOrder) override;
 
 		std::string image_id;
 		std::string weapon;
 	};
 
-	// helper overloads for deserialization-only
-	bool read(ryml::ConstNodeRef const& n, ArticleDefinitionRect* val);
 }

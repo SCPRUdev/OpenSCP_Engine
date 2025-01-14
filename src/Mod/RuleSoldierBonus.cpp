@@ -34,26 +34,25 @@ RuleSoldierBonus::RuleSoldierBonus(const std::string &name, int listOrder) : _na
  * Loads the soldier bonus definition from YAML.
  * @param node YAML node.
  */
-void RuleSoldierBonus::load(const YAML::YamlNodeReader& node, Mod* mod, const ModScript &parsers)
+void RuleSoldierBonus::load(const YAML::Node &node, Mod* mod, const ModScript &parsers)
 {
-	const auto& reader = node.useIndex();
-	if (const auto& parent = reader["refNode"])
+	if (const YAML::Node &parent = node["refNode"])
 	{
 		load(parent, mod, parsers);
 	}
 
-	reader.tryRead("visibilityAtDark", _visibilityAtDark);
-	reader.tryRead("visibilityAtDay", _visibilityAtDay);
-	reader.tryRead("psiVision", _psiVision);
-	reader.tryRead("heatVision", _heatVision);
+	_visibilityAtDark = node["visibilityAtDark"].as<int>(_visibilityAtDark);
+	_visibilityAtDay = node["visibilityAtDay"].as<int>(_visibilityAtDay);
+	_psiVision = node["psiVision"].as<int>(_psiVision);
+	_heatVision = node["heatVision"].as<int>(_heatVision);
 
-	reader.tryRead("frontArmor", _frontArmor);
-	reader.tryRead("sideArmor", _sideArmor);
-	reader.tryRead("leftArmorDiff", _leftArmorDiff);
-	reader.tryRead("rearArmor", _rearArmor);
-	reader.tryRead("underArmor", _underArmor);
-	_stats.merge(reader["stats"].readVal(_stats));
-	const auto& rec = reader["recovery"];
+	_frontArmor = node["frontArmor"].as<int>(_frontArmor);
+	_sideArmor = node["sideArmor"].as<int>(_sideArmor);
+	_leftArmorDiff = node["leftArmorDiff"].as<int>(_leftArmorDiff);
+	_rearArmor = node["rearArmor"].as<int>(_rearArmor);
+	_underArmor = node["underArmor"].as<int>(_underArmor);
+	_stats.merge(node["stats"].as<UnitStats>(_stats));
+	const YAML::Node &rec = node["recovery"];
 	{
 		_timeRecovery.load(_name, rec, parsers.bonusStatsScripts.get<ModScript::TimeSoldierRecoveryStatBonus>());
 		_energyRecovery.load(_name, rec, parsers.bonusStatsScripts.get<ModScript::EnergySoldierRecoveryStatBonus>());
@@ -63,10 +62,10 @@ void RuleSoldierBonus::load(const YAML::YamlNodeReader& node, Mod* mod, const Mo
 		_stunRecovery.load(_name, rec, parsers.bonusStatsScripts.get<ModScript::StunSoldierRecoveryStatBonus>());
 	}
 
-	_soldierBonusScripts.load(_name, reader, parsers.soldierBonusScripts);
-	_scriptValues.load(reader, parsers.getShared());
+	_soldierBonusScripts.load(_name, node, parsers.soldierBonusScripts);
+	_scriptValues.load(node, parsers.getShared());
 
-	reader.tryRead("listOrder", _listOrder);
+	_listOrder = node["listOrder"].as<int>(_listOrder);
 }
 
 /**

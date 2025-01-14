@@ -42,95 +42,95 @@ MCDPatch::~MCDPatch()
  * TODO: fill this out with more data.
  * @param node YAML node.
  */
-void MCDPatch::load(const YAML::YamlNodeReader& reader)
+void MCDPatch::load(const YAML::Node &node)
 {
-	for (const auto& d : reader["data"].children())
+	YAML::Node data = node["data"];
+	for (YAML::const_iterator i = data.begin(); i != data.end(); ++i)
 	{
-		const auto& mcd = d.useIndex();
-		size_t MCDIndex = mcd["MCDIndex"].readVal<size_t>();
-		if (mcd["bigWall"])
+		size_t MCDIndex = (*i)["MCDIndex"].as<size_t>();
+		if ((*i)["bigWall"])
 		{
-			int bigWall = mcd["bigWall"].readVal<int>();
+			int bigWall = (*i)["bigWall"].as<int>();
 			_bigWalls.push_back(std::make_pair(MCDIndex, bigWall));
 		}
-		if (mcd["TUWalk"])
+		if ((*i)["TUWalk"])
 		{
-			int TUWalk = mcd["TUWalk"].readVal<int>();
+			int TUWalk = (*i)["TUWalk"].as<int>();
 			_TUWalks.push_back(std::make_pair(MCDIndex, TUWalk));
 		}
-		if (mcd["TUFly"])
+		if ((*i)["TUFly"])
 		{
-			int TUFly = mcd["TUFly"].readVal<int>();
+			int TUFly = (*i)["TUFly"].as<int>();
 			_TUFlys.push_back(std::make_pair(MCDIndex, TUFly));
 		}
-		if (mcd["TUSlide"])
+		if ((*i)["TUSlide"])
 		{
-			int TUSlide = mcd["TUSlide"].readVal<int>();
+			int TUSlide = (*i)["TUSlide"].as<int>();
 			_TUSlides.push_back(std::make_pair(MCDIndex, TUSlide));
 		}
-		if (mcd["deathTile"])
+		if ((*i)["deathTile"])
 		{
-			int deathTile = mcd["deathTile"].readVal<int>();
+			int deathTile = (*i)["deathTile"].as<int>();
 			_deathTiles.push_back(std::make_pair(MCDIndex, deathTile));
 		}
-		if (mcd["terrainHeight"])
+		if ((*i)["terrainHeight"])
 		{
-			int terrainHeight = mcd["terrainHeight"].readVal<int>();
+			int terrainHeight = (*i)["terrainHeight"].as<int>();
 			_terrainHeight.push_back(std::make_pair(MCDIndex, terrainHeight));
 		}
-		if (mcd["specialType"])
+		if ((*i)["specialType"])
 		{
-			int specialType = mcd["specialType"].readVal<int>();
+			int specialType = (*i)["specialType"].as<int>();
 			_specialTypes.push_back(std::make_pair(MCDIndex, specialType));
 		}
-		if (mcd["explosive"])
+		if ((*i)["explosive"])
 		{
-			int explosive = mcd["explosive"].readVal<int>();
+			int explosive = (*i)["explosive"].as<int>();
 			_explosives.push_back(std::make_pair(MCDIndex, explosive));
 		}
-		if (mcd["armor"])
+		if ((*i)["armor"])
 		{
-			int armor = mcd["armor"].readVal<int>();
+			int armor = (*i)["armor"].as<int>();
 			_armors.push_back(std::make_pair(MCDIndex, armor));
 		}
-		if (mcd["flammability"])
+		if ((*i)["flammability"])
 		{
-			int flammability = mcd["flammability"].readVal<int>();
+			int flammability = (*i)["flammability"].as<int>();
 			_flammabilities.push_back(std::make_pair(MCDIndex, flammability));
 		}
-		if (mcd["fuel"])
+		if ((*i)["fuel"])
 		{
-			int fuel = mcd["fuel"].readVal<int>();
+			int fuel = (*i)["fuel"].as<int>();
 			_fuels.push_back(std::make_pair(MCDIndex, fuel));
 		}
-		if (mcd["footstepSound"])
+		if ((*i)["footstepSound"])
 		{
-			int footstepSound = mcd["footstepSound"].readVal<int>();
+			int footstepSound = (*i)["footstepSound"].as<int>();
 			_footstepSounds.push_back(std::make_pair(MCDIndex, footstepSound));
 		}
-		if (mcd["HEBlock"])
+		if ((*i)["HEBlock"])
 		{
-			int HEBlock = mcd["HEBlock"].readVal<int>();
+			int HEBlock = (*i)["HEBlock"].as<int>();
 			_HEBlocks.push_back(std::make_pair(MCDIndex, HEBlock));
 		}
-		if (mcd["noFloor"])
+		if ((*i)["noFloor"])
 		{
-			bool noFloor = mcd["noFloor"].readVal<bool>();
+			bool noFloor = (*i)["noFloor"].as<bool>();
 			_noFloors.push_back(std::make_pair(MCDIndex, noFloor));
 		}
-		if (mcd["LOFTS"])
+		if ((*i)["LOFTS"])
 		{
-			std::vector<int> lofts = mcd["LOFTS"].readVal<std::vector<int> >();
+			std::vector<int> lofts = (*i)["LOFTS"].as< std::vector<int> >();
 			_LOFTS.push_back(std::make_pair(MCDIndex, lofts));
 		}
-		if (mcd["stopLOS"])
+		if ((*i)["stopLOS"])
 		{
-			bool stopLOS = mcd["stopLOS"].readVal<bool>();
+			bool stopLOS = (*i)["stopLOS"].as<bool>();
 			_stopLOSses.push_back(std::make_pair(MCDIndex, stopLOS));
 		}
-		if (mcd["objectType"])
+		if ((*i)["objectType"])
 		{
-			int objectType = mcd["objectType"].readVal<int>();
+			int objectType = (*i)["objectType"].as<int>();
 			_objectTypes.push_back(std::make_pair(MCDIndex, objectType));
 		}
 	}

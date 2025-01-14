@@ -299,48 +299,44 @@ RuleStatBonus::RuleStatBonus()
  * Loads the item from a YAML file.
  * @param node YAML node.
  */
-void RuleStatBonus::load(const std::string& parentName, const YAML::YamlNodeReader& reader, const ModScript::BonusStatsCommon& parser)
+void RuleStatBonus::load(const std::string& parentName, const YAML::Node& node, const ModScript::BonusStatsCommon& parser)
 {
-	if (reader)
+	if (node)
 	{
-		if (const auto& stats = reader[ryml::to_csubstr(parser.getPropertyNodeName())])
+		if (const YAML::Node& stats = node[parser.getPropertyNodeName()])
 		{
 			_bonusOrig.clear();
-			if (stats.isMap())
+			if (stats.IsMap())
 			{
-				for (const auto& dd : stats.children())
+				for (const auto& stat : statDataMap)
 				{
-					std::string key = dd.readKey<std::string>();
-					for (size_t statIndex = 0; statIndex < std::size(statDataMap); statIndex++)
+					if (const YAML::Node &dd = stats[stat.name])
 					{
-						if (key != statDataMap[statIndex].name)
-							continue;
 						std::vector<float> vec;
-						if (dd.hasVal())
+						if (dd.IsScalar())
 						{
-							float val = dd.readVal<float>();
+							float val = dd.as<float>();
 							vec.push_back(val);
 						}
 						else
 						{
 							for (size_t j = 0; j < statDataFuncSize; ++j)
 							{
-								if (j < dd.childrenCount())
+								if (j < dd.size())
 								{
-									float val = dd[j].readVal<float>();
+									float val = dd[j].as<float>();
 									vec.push_back(val);
 								}
 							}
 						}
-						_bonusOrig.push_back(std::make_pair(statDataMap[statIndex].name, std::move(vec)));
-						break;
+						_bonusOrig.push_back(std::make_pair(stat.name, std::move(vec)));
 					}
 				}
 				_refresh = true;
 			}
-			else if (stats.hasVal())
+			else if (stats.IsScalar())
 			{
-				_container.load(parentName, stats.readVal<std::string>(), parser);
+				_container.load(parentName, stats.as<std::string>(), parser);
 				_refresh = false;
 			}
 			// let's remember that this was modified by a modder (i.e. is not a default value)

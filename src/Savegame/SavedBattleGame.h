@@ -19,8 +19,7 @@
  */
 #include <vector>
 #include <string>
-#include <list>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "Tile.h"
 #include "../Mod/AlienDeployment.h"
 #include "../Mod/RuleCraft.h"
@@ -140,9 +139,9 @@ public:
 	/// Cleans up the saved game.
 	~SavedBattleGame();
 	/// Loads a saved battle game from YAML.
-	void load(const YAML::YamlNodeReader& reader, Mod *mod, SavedGame* savedGame);
+	void load(const YAML::Node& node, Mod *mod, SavedGame* savedGame);
 	/// Saves a saved battle game to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Sets the dimensions of the map and initializes it.
 	void initMap(int mapsize_x, int mapsize_y, int mapsize_z, bool resetTerrain = true);
 	/// Initialises the pathfinding and tile engine.

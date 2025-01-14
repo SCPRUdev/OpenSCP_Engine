@@ -97,7 +97,7 @@ void UnitSprite::selectItem(Part& p, const BattleItem *item, int dir)
 	//enforce compatibility with basic version
 	if (!_itemSurface->getFrame(index + dir))
 	{
-		throw Exception("Frame(s) missing in 'HANDOB.PCK' for item '" + item->getRules()->getType() + "'");
+		throw Exception("Frame(s) missing in 'HANDOB.PCK' for item '" + item->getRules()->getName() + "'");
 	}
 
 	int result = ModScript::scriptFunc2<ModScript::SelectItemSprite>(

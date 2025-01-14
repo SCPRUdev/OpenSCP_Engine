@@ -19,7 +19,7 @@
  */
 #include <string>
 #include <map>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -52,7 +52,7 @@ public:
 	/// Destructor.
 	~RuleInterface();
 	/// Load from YAML.
-	void load(const YAML::YamlNodeReader& reader, Mod *mod);
+	void load(const YAML::Node& node, Mod *mod);
 	/// Get an element.
 	Element *getElement(const std::string &id);
 	/// Get palette.

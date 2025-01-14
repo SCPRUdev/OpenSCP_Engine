@@ -43,29 +43,31 @@ MovingTarget::~MovingTarget()
  * Loads the moving target from a YAML file.
  * @param node YAML node.
  */
-void MovingTarget::load(const YAML::YamlNodeReader& reader)
+void MovingTarget::load(const YAML::Node &node)
 {
-	Target::load(reader);
-	reader.tryRead("speedLon", _speedLon);
-	reader.tryRead("speedLat", _speedLat);
-	reader.tryRead("speedRadian", _speedRadian);
-	reader.tryRead("speed", _speed);
+	Target::load(node);
+	_speedLon = node["speedLon"].as<double>(_speedLon);
+	_speedLat = node["speedLat"].as<double>(_speedLat);
+	_speedRadian = node["speedRadian"].as<double>(_speedRadian);
+	_speed = node["speed"].as<int>(_speed);
 }
 
 /**
  * Saves the moving target to a YAML file.
  * @return YAML node.
  */
-void MovingTarget::save(YAML::YamlNodeWriter writer) const
+YAML::Node MovingTarget::save() const
 {
-	writer.setAsMap();
-	Target::save(writer);
-	if (_dest)
-		_dest->saveId(writer["dest"]);
-	writer.write("speedLon", serializeDouble(_speedLon));
-	writer.write("speedLat", serializeDouble(_speedLat));
-	writer.write("speedRadian", serializeDouble(_speedRadian));
-	writer.write("speed", _speed);
+	YAML::Node node = Target::save();
+	if (_dest != 0)
+	{
+		node["dest"] = _dest->saveId();
+	}
+	node["speedLon"] = serializeDouble(_speedLon);
+	node["speedLat"] = serializeDouble(_speedLat);
+	node["speedRadian"] = serializeDouble(_speedRadian);
+	node["speed"] = _speed;
+	return node;
 }
 
 /**

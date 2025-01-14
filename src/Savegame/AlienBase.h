@@ -20,7 +20,7 @@
 #include "Target.h"
 #include <string>
 #include "../Mod/AlienDeployment.h"
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -44,9 +44,9 @@ public:
 	/// Cleans up the alien base.
 	~AlienBase();
 	/// Loads the alien base from YAML.
-	void load(const YAML::YamlNodeReader& reader) override;
+	void load(const YAML::Node& node) override;
 	/// Saves the alien base to YAML.
-	void save(YAML::YamlNodeWriter writer) const override;
+	YAML::Node save() const override;
 	/// Gets the alien base's type.
 	std::string getType() const override;
 	/// Gets the alien base's marker sprite.

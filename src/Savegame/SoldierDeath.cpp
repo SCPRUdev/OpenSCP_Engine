@@ -41,23 +41,29 @@ SoldierDeath::~SoldierDeath()
  * Loads the death from a YAML file.
  * @param node YAML node.
  */
-void SoldierDeath::load(const YAML::YamlNodeReader& reader)
+void SoldierDeath::load(const YAML::Node &node)
 {
-	_time.load(reader["time"]);
-	if (const auto& kill = reader["cause"])
-		_cause = new BattleUnitKills(kill);
+	_time.load(node["time"]);
+	if (node["cause"])
+	{
+		_cause = new BattleUnitKills();
+		_cause->load(node["cause"]);
+	}
 }
 
 /**
  * Saves the death to a YAML file.
  * @returns YAML node.
  */
-void SoldierDeath::save(YAML::YamlNodeWriter writer) const
+YAML::Node SoldierDeath::save() const
 {
-	writer.setAsMap();
-	_time.save(writer["time"]);
-	if (_cause)
-		_cause->save(writer["cause"]);
+	YAML::Node node;
+	node["time"] = _time.save();
+	if (_cause != 0)
+	{
+		node["cause"] = _cause->save();
+	}
+	return node;
 }
 
 /**

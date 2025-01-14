@@ -19,7 +19,6 @@
  */
 #include <vector>
 #include <string>
-#include "../Engine/Yaml.h"
 #include "ModScript.h"
 
 namespace OpenXcom
@@ -47,7 +46,7 @@ public:
 	/// Default constructor.
 	RuleStatBonus();
 	/// Loads item data from YAML.
-	void load(const std::string& parentName, const YAML::YamlNodeReader& reader, const ModScript::BonusStatsCommon& parser);
+	void load(const std::string& parentName, const YAML::Node& node, const ModScript::BonusStatsCommon& parser);
 	/// Set default firing bonus.
 	void setFiring();
 	/// Set default melee bonus.

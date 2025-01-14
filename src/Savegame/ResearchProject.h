@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -56,9 +56,9 @@ public:
 	/// get the ResearchProject Mod
 	const RuleResearch * getRules() const;
 	/// load the ResearchProject from YAML
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// save the ResearchProject to YAML
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Get a string describing current progress.
 	std::string getResearchProgress() const;
 };

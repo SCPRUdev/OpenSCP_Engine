@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include <string>
 #include <map>
 
@@ -37,7 +37,7 @@ public:
 	/// Cleans up the external strings set.
 	virtual ~ExtraStrings();
 	/// Loads the data from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node &node);
 	/// Gets the list of strings defined by this mod.
 	std::map<std::string, std::string> *getStrings();
 };

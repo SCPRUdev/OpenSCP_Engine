@@ -18,7 +18,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <string>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include <SDL_stdinc.h>
 
 namespace OpenXcom
@@ -31,43 +31,69 @@ constexpr int defIntNullable = -1;
 constexpr Sint8 defBoolNullable = -1;
 
 /// Load bool from yaml.
-inline void loadBool(bool& value, const YAML::YamlNodeReader& reader)
+inline void loadBool(bool& value, const YAML::Node& node)
 {
-	if (!reader)
-		return;
-	value = reader.readVal<bool>();
+	if (node)
+	{
+		value = node.as<bool>();
+	}
 }
 
 /// Load bool as int from yaml.
-inline void loadBoolNullable(int& value, const YAML::YamlNodeReader& reader)
+inline void loadBoolNullable(int& value, const YAML::Node& node)
 {
-	if (!reader)
-		return;
-	value = reader.hasNullVal() ? defBoolNullable : reader.readVal<bool>();
+	if (node)
+	{
+		if (node.IsNull())
+		{
+			value = defBoolNullable;
+		}
+		else
+		{
+			value = node.as<bool>();
+		}
+	}
 }
 
 /// Load bool as int from yaml.
-inline void loadBoolNullable(Sint8& value, const YAML::YamlNodeReader& reader)
+inline void loadBoolNullable(Sint8& value, const YAML::Node& node)
 {
-	if (!reader)
-		return;
-	value = reader.hasNullVal() ? defBoolNullable : reader.readVal<bool>();
+	if (node)
+	{
+		if (node.IsNull())
+		{
+			value = defBoolNullable;
+		}
+		else
+		{
+			value = node.as<bool>();
+		}
+	}
 }
 
 /// Load int from yaml.
-inline void loadInt(int& value, const YAML::YamlNodeReader& reader)
+inline void loadInt(int& value, const YAML::Node& node)
 {
-	if (!reader)
-		return;
-	value = reader.readVal<int>();
+	if (node)
+	{
+		value = node.as<int>();
+	}
 }
 
 /// Load int from yaml.
-inline void loadIntNullable(int& value, const YAML::YamlNodeReader& reader)
+inline void loadIntNullable(int& value, const YAML::Node& node)
 {
-	if (!reader)
-		return;
-	value = reader.hasNullVal() ? defIntNullable : reader.readVal<int>();
+	if (node)
+	{
+		if (node.IsNull())
+		{
+			value = defIntNullable;
+		}
+		else
+		{
+			value = node.as<int>();
+		}
+	}
 }
 
 inline bool useBoolNullable(int value, bool def)

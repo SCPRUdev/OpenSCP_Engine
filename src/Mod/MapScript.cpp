@@ -18,7 +18,7 @@
  */
 
 #include "MapScript.h"
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "../Engine/RNG.h"
 #include "../Engine/Exception.h"
 #include "../Engine/Logger.h"
@@ -51,13 +51,12 @@ MapScript::~MapScript()
  * Loads a map script command from YAML.
  * @param node the YAML node from which to read.
  */
-void MapScript::load(const YAML::YamlNodeReader& node)
+void MapScript::load(const YAML::Node& node)
 {
-	const auto& reader = node.useIndex();
 	std::string command;
-	if (const auto& map = reader["type"])
+	if (const YAML::Node &map = node["type"])
 	{
-		command = map.readVal<std::string>("");
+		command = map.as<std::string>("");
 		if (command == "addBlock")
 			_type = MSC_ADDBLOCK;
 		else if (command == "addLine")
@@ -95,53 +94,58 @@ void MapScript::load(const YAML::YamlNodeReader& node)
 		throw Exception("Missing command type.");
 	}
 
-
-	for (const auto& rectReader : reader["rects"].children())
+	if (const YAML::Node &map = node["rects"])
 	{
-		SDL_Rect* rect = new SDL_Rect();
-		rect->x = rectReader[0].readVal<int>();
-		rect->y = rectReader[1].readVal<int>();
-		rect->w = rectReader[2].readVal<int>();
-		rect->h = rectReader[3].readVal<int>();
-		_rects.push_back(rect);
-	}
-	if (const auto& craftGroups = reader["craftGroups"])
-	{
-		craftGroups.tryReadVal(_craftGroups);
-	}
-	if (const auto& map = reader["tunnelData"])
-	{
-		_tunnelData = new TunnelData;
-		_tunnelData->level = map["level"].readVal(0);
-		for (const auto& mcdReplacement : map["MCDReplacements"].children())
+		for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 		{
-			MCDReplacement replacement;
-			std::string type = mcdReplacement["type"].readVal<std::string>("");
-			replacement.entry = mcdReplacement["entry"].readVal(-1);
-			replacement.set = mcdReplacement["set"].readVal(-1);
-			_tunnelData->replacements[type] = replacement;
+			SDL_Rect *rect = new SDL_Rect();
+			rect->x = (*i)[0].as<int>();
+			rect->y = (*i)[1].as<int>();
+			rect->w = (*i)[2].as<int>();
+			rect->h = (*i)[3].as<int>();
+			_rects.push_back(rect);
 		}
 	}
-	if (const auto& map = reader["conditionals"])
+	if (const YAML::Node& craftGroups = node["craftGroups"])
 	{
-		if (map.isSeq())
+		_craftGroups = craftGroups.as<std::vector<int> >(_craftGroups);
+	}
+	if (const YAML::Node &map = node["tunnelData"])
+	{
+		_tunnelData = new TunnelData;
+		_tunnelData->level = map["level"].as<int>(0);
+		if (const YAML::Node &data = map["MCDReplacements"])
 		{
-			map.tryReadVal(_conditionals);
+			for (YAML::Node::const_iterator i = data.begin(); i != data.end(); ++i)
+			{
+				MCDReplacement replacement;
+				std::string type = (*i)["type"].as<std::string>("");
+				replacement.entry = (*i)["entry"].as<int>(-1);
+				replacement.set = (*i)["set"].as<int>(-1);
+				_tunnelData->replacements[type] = replacement;
+			}
+		}
+	}
+	if (const YAML::Node &map = node["conditionals"])
+	{
+		if (map.Type() == YAML::NodeType::Sequence)
+		{
+			_conditionals = map.as<std::vector<int> >(_conditionals);
 		}
 		else
 		{
-			_conditionals.push_back(map.readVal(0));
+			_conditionals.push_back(map.as<int>(0));
 		}
 	}
-	if (const auto& map = reader["size"])
+	if (const YAML::Node &map = node["size"])
 	{
-		if (map.isSeq())
+		if (map.Type() == YAML::NodeType::Sequence)
 		{
 			int *sizes[3] = {&_sizeX, &_sizeY, &_sizeZ};
 			int entry = 0;
-			for (const auto& size : map.children())
+			for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 			{
-				*sizes[entry] = size.readVal(1);
+				*sizes[entry] = (*i).as<int>(1);
 				entry++;
 				if (entry == 3)
 				{
@@ -151,40 +155,40 @@ void MapScript::load(const YAML::YamlNodeReader& node)
 		}
 		else
 		{
-			map.tryReadVal(_sizeX);
+			_sizeX = map.as<int>(_sizeX);
 			_sizeY = _sizeX;
 		}
 	}
 
-	if (const auto& map = reader["groups"])
+	if (const YAML::Node &map = node["groups"])
 	{
 		_groups.clear();
-		if (map.isSeq())
+		if (map.Type() == YAML::NodeType::Sequence)
 		{
-			for (const auto& group : map.children())
+			for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 			{
-				_groups.push_back(group.readVal(0));
+				_groups.push_back((*i).as<int>(0));
 			}
 		}
 		else
 		{
-			_groups.push_back(map.readVal(0));
+			_groups.push_back(map.as<int>(0));
 		}
 	}
 	size_t selectionSize = _groups.size();
-	if (const auto& map = reader["blocks"])
+	if (const YAML::Node &map = node["blocks"])
 	{
 		_groups.clear();
-		if (map.isSeq())
+		if (map.Type() == YAML::NodeType::Sequence)
 		{
-			for (const auto& block : map.children())
+			for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 			{
-				_blocks.push_back(block.readVal(0));
+				_blocks.push_back((*i).as<int>(0));
 			}
 		}
 		else
 		{
-			_blocks.push_back(map.readVal(0));
+			_blocks.push_back(map.as<int>(0));
 		}
 		selectionSize = _blocks.size();
 	}
@@ -192,46 +196,46 @@ void MapScript::load(const YAML::YamlNodeReader& node)
 	_frequencies.resize(selectionSize, 1);
 	_maxUses.resize(selectionSize, -1);
 
-	if (const auto& map = reader["freqs"])
+	if (const YAML::Node &map = node["freqs"])
 	{
-		if (map.isSeq())
+		if (map.Type() == YAML::NodeType::Sequence)
 		{
 			size_t entry = 0;
-			for (const auto& freq : map.children())
+			for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 			{
 				if (entry == selectionSize)
 					break;
-				_frequencies.at(entry) = freq.readVal(1);
+				_frequencies.at(entry) = (*i).as<int>(1);
 				entry++;
 			}
 		}
 		else
 		{
-			_frequencies.at(0) = map.readVal(1);
+			_frequencies.at(0) = map.as<int>(1);
 		}
 	}
-	if (const auto& map = reader["maxUses"])
+	if (const YAML::Node &map = node["maxUses"])
 	{
-		if (map.isSeq())
+		if (map.Type() == YAML::NodeType::Sequence)
 		{
 			size_t entry = 0;
-			for (const auto& maxUse : map.children())
+			for (YAML::const_iterator i = map.begin(); i != map.end(); ++i)
 			{
 				if (entry == selectionSize)
 					break;
-				_maxUses.at(entry) = maxUse.readVal(-1);
+				_maxUses.at(entry) = (*i).as<int>(-1);
 				entry++;
 			}
 		}
 		else
 		{
-			_maxUses.at(0) = map.readVal(-1);
+			_maxUses.at(0) = map.as<int>(-1);
 		}
 	}
 
-	if (const auto& map = reader["direction"])
+	if (const YAML::Node &map = node["direction"])
 	{
-		std::string direction = map.readVal<std::string>("");
+		std::string direction = map.as<std::string>("");
 		if (!direction.empty())
 		{
 			char dir = toupper(direction[0]);
@@ -261,34 +265,34 @@ void MapScript::load(const YAML::YamlNodeReader& node)
 	}
 
 
-	reader.tryRead("verticalGroup", _verticalGroup);
-	reader.tryRead("horizontalGroup", _horizontalGroup);
-	reader.tryRead("crossingGroup", _crossingGroup);
-	reader.tryRead("canBeSkipped", _canBeSkipped);
-	reader.tryRead("markAsReinforcementsBlock", _markAsReinforcementsBlock);
-	reader.tryRead("executionChances", _executionChances);
-	reader.tryRead("executions", _executions);
-	reader.tryRead("UFOName", _ufoName);
-	reader.tryRead("craftName", _craftName);
-	if (reader["terrain"])
+	_verticalGroup = node["verticalGroup"].as<int>(_verticalGroup);
+	_horizontalGroup = node["horizontalGroup"].as<int>(_horizontalGroup);
+	_crossingGroup = node["crossingGroup"].as<int>(_crossingGroup);
+	_canBeSkipped = node["canBeSkipped"].as<bool>(_canBeSkipped);
+	_markAsReinforcementsBlock = node["markAsReinforcementsBlock"].as<bool>(_markAsReinforcementsBlock);
+	_executionChances = node["executionChances"].as<int>(_executionChances);
+	_executions = node["executions"].as<int>(_executions);
+	_ufoName = node["UFOName"].as<std::string>(_ufoName);
+	_craftName = node["craftName"].as<std::string>(_craftName);
+	if (node["terrain"])
 	{
 		_randomTerrain.clear();
-		_randomTerrain.push_back(reader["terrain"].readVal<std::string>());
+		_randomTerrain.push_back(node["terrain"].as<std::string>());
 	}
-	reader.tryRead("randomTerrain", _randomTerrain);
+	_randomTerrain = node["randomTerrain"].as<std::vector<std::string> >(_randomTerrain);
 	// take no chances, don't accept negative values here.
-	_label = std::abs(reader["label"].readVal(_label));
+	_label = std::abs(node["label"].as<int>(_label));
 
 	// Load any VerticalLevels into a map if we have them
-	if (reader["verticalLevels"])
+	if (node["verticalLevels"])
 	{
 		_verticalLevels.clear();
-		for (const auto& levelReader : reader["verticalLevels"].children())
+		for (YAML::const_iterator i = node["verticalLevels"].begin(); i != node["verticalLevels"].end(); ++i)
 		{
-			if (levelReader["type"])
+			if ((*i)["type"])
 			{
 				VerticalLevel level;
-				level.load(levelReader);
+				level.load(*i);
 				_verticalLevels.push_back(level);
 			}
 		}

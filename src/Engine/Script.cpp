@@ -3830,15 +3830,15 @@ bool ScriptParserBase::parseBase(ScriptContainerBase& destScript, const std::str
 /**
  * Parse node and return new script.
  */
-void ScriptParserBase::parseNode(ScriptContainerBase& container, const std::string& parentName, const YAML::YamlNodeReader& reader) const
+void ScriptParserBase::parseNode(ScriptContainerBase& container, const std::string& parentName, const YAML::Node& node) const
 {
-	if(const YAML::YamlNodeReader& scripts = reader["scripts"])
+	if(const YAML::Node& scripts = node["scripts"])
 	{
-		if (const YAML::YamlNodeReader& curr = scripts[ryml::to_csubstr(getName())])
+		if (const YAML::Node& curr = scripts[getName()])
 		{
-			if (false == parseBase(container, parentName, curr.readVal<std::string>()))
+			if (false == parseBase(container, parentName, curr.as<std::string>()))
 			{
-				Log(LOG_ERROR) << "    for node with code at line " << reader.getLocationInFile().line << " in " << getGlobal()->getCurrentFile();
+				Log(LOG_ERROR) << "    for node with code at line " << node.Mark().line << " in " << getGlobal()->getCurrentFile();
 				Log(LOG_ERROR) << ""; // dummy line to separate similar errors
 			}
 		}
@@ -3877,7 +3877,7 @@ void ScriptParserBase::parseCode(ScriptContainerBase& container, const std::stri
 /**
  * Load global data from YAML.
  */
-void ScriptParserBase::load(const YAML::YamlNodeReader& reader)
+void ScriptParserBase::load(const YAML::Node& node)
 {
 
 }
@@ -4038,9 +4038,9 @@ ScriptParserEventsBase::ScriptParserEventsBase(ScriptGlobal* shared, const std::
 /**
  * Parse node and return new script.
  */
-void ScriptParserEventsBase::parseNode(ScriptContainerEventsBase& container, const std::string& type, const YAML::YamlNodeReader& reader) const
+void ScriptParserEventsBase::parseNode(ScriptContainerEventsBase& container, const std::string& type, const YAML::Node& node) const
 {
-	ScriptParserBase::parseNode(container._current, type, reader);
+	ScriptParserBase::parseNode(container._current, type, node);
 	container._events = getEvents();
 }
 
@@ -4056,7 +4056,7 @@ void ScriptParserEventsBase::parseCode(ScriptContainerEventsBase& container, con
 /**
  * Load global data from YAML.
  */
-void ScriptParserEventsBase::load(const YAML::YamlNodeReader& scripts)
+void ScriptParserEventsBase::load(const YAML::Node& scripts)
 {
 	ScriptParserBase::load(scripts);
 
@@ -4074,26 +4074,26 @@ void ScriptParserEventsBase::load(const YAML::YamlNodeReader& scripts)
 		_eventsData.erase(it);
 	};
 
-	auto getNode = [&](const YAML::YamlNodeReader& i, const std::string& nodeName)
+	auto getNode = [&](const YAML::Node& i, const std::string& nodeName)
 	{
-		auto n = i[ryml::to_csubstr(nodeName)];
-		return std::make_tuple(nodeName, std::move(n), !!n);
+		const auto& n = i[nodeName];
+		return std::make_tuple(nodeName, n, !!n);
 	};
-	auto haveNode = [&](const std::tuple<std::string, YAML::YamlNodeReader, bool>& nn)
+	auto haveNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
 	{
 		return std::get<bool>(nn);
 	};
-	auto getLineFromNode = [&](const YAML::YamlNodeReader& n)
+	auto getLineFromNode = [&](const YAML::Node& n)
 	{
-		return std::to_string(n.getLocationInFile().line);
+		return std::to_string(n.Mark().line);
 	};
-	auto getDescriptionNode = [&](const std::tuple<std::string, YAML::YamlNodeReader, bool>& nn)
+	auto getDescriptionNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
 	{
-		return std::string("'") + std::get<std::string>(nn) + "' at line " + getLineFromNode(std::get<YAML::YamlNodeReader>(nn));
+		return std::string("'") + std::get<std::string>(nn) + "' at line " + getLineFromNode(std::get<YAML::Node>(nn));
 	};
-	auto getNameFromNode = [&](const std::tuple<std::string, YAML::YamlNodeReader, bool>& nn)
+	auto getNameFromNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
 	{
-		auto name = std::get<YAML::YamlNodeReader>(nn).readVal<std::string>();
+		auto name = std::get<YAML::Node>(nn).as<std::string>();
 		if (name.empty())
 		{
 			throw Exception("Invalid name for " + getDescriptionNode(nn));
@@ -4101,9 +4101,9 @@ void ScriptParserEventsBase::load(const YAML::YamlNodeReader& scripts)
 		return name;
 	};
 
-	if (const YAML::YamlNodeReader& curr = scripts[ryml::to_csubstr(getName())])
+	if (const YAML::Node& curr = scripts[getName()])
 	{
-		for (const YAML::YamlNodeReader& i : curr.children())
+		for (const YAML::Node& i : curr)
 		{
 			const auto deleteNode = getNode(i, "delete");
 			const auto newNode = getNode(i, "new");
@@ -4116,7 +4116,7 @@ void ScriptParserEventsBase::load(const YAML::YamlNodeReader& scripts)
 
 			{
 				// check for duplicates
-				const std::tuple<std::string, YAML::YamlNodeReader, bool>* last = nullptr;
+				const std::tuple<std::string, YAML::Node, bool>* last = nullptr;
 				for (auto* p : { &deleteNode, &newNode, &updateNode, &overrideNode, &ignoreNode })
 				{
 					if (haveNode(*p))
@@ -4154,19 +4154,19 @@ void ScriptParserEventsBase::load(const YAML::YamlNodeReader& scripts)
 				ScriptContainerBase scp;
 
 
-				offset = i["offset"].readVal<double>(0) * OffsetScale;
+				offset = i["offset"].as<double>(0) * OffsetScale;
 				if (offset == 0 || offset >= (int)OffsetMax || offset <= -(int)OffsetMax)
 				{
 					//TODO: make it a exception
-					Log(LOG_ERROR) << "Invalid offset for '" << getName() << "' equal: '" << i["offset"].readVal<std::string>() << "'";
+					Log(LOG_ERROR) << "Invalid offset for '" << getName() << "' equal: '" << i["offset"].as<std::string>() << "'";
 					Log(LOG_ERROR) << "    for node at line " << getLineFromNode(i["offset"]) << " in " << getGlobal()->getCurrentFile();
 					Log(LOG_ERROR) << ""; // dummy line to separate similar errors
 					continue;
 				}
 
 				{
-					auto nameWithPrefix = name.size() ? "Global:" + name : "Global off: " + i["offset"].readVal<std::string>();
-					if (false == parseBase(scp, nameWithPrefix, i["code"].readVal<std::string>("")))
+					auto nameWithPrefix = name.size() ? "Global:" + name : "Global off: " + i["offset"].as<std::string>();
+					if (false == parseBase(scp, nameWithPrefix, i["code"].as<std::string>("")))
 					{
 						Log(LOG_ERROR) << "    for node with code at line " << getLineFromNode(i["code"]) << " in " << getGlobal()->getCurrentFile();
 						Log(LOG_ERROR) << ""; // dummy line to separate similar errors
@@ -4297,25 +4297,25 @@ int ScriptValuesBase::getBase(size_t t) const
 /**
  * Load values from yaml file.
  */
-void ScriptValuesBase::loadBase(const YAML::YamlNodeReader& reader, const ScriptGlobal* shared, ArgEnum type, const std::string& nodeName)
+void ScriptValuesBase::loadBase(const YAML::Node &node, const ScriptGlobal* shared, ArgEnum type, const std::string& nodeName)
 {
-	if (const YAML::YamlNodeReader& tags = reader[ryml::to_csubstr(nodeName)])
+	if (const YAML::Node& tags = node[nodeName])
 	{
-		if (tags.isMap())
+		if (tags.IsMap())
 		{
-			for (const YAML::YamlNodeReader& tag : tags.children())
+			for (const std::pair<YAML::Node, YAML::Node>& pair : tags)
 			{
-				size_t i = shared->getTag(type, ScriptRef::tempFrom("Tag." + tag.readKey<std::string>()));
+				size_t i = shared->getTag(type, ScriptRef::tempFrom("Tag." + pair.first.as<std::string>()));
 				if (i)
 				{
 					auto temp = 0;
 					auto data = shared->getTagValueData(type, i);
-					shared->getTagValueTypeData(data.valueType).load(shared, temp, tag);
+					shared->getTagValueTypeData(data.valueType).load(shared, temp, pair.second);
 					setBase(i, temp);
 				}
 				else
 				{
-					Log(LOG_ERROR) << "Error in tags: '" << tag.readKey<std::string>() << "' unknown tag name not defined in current file";
+					Log(LOG_ERROR) << "Error in tags: '" << pair.first << "' unknown tag name not defined in current file";
 				}
 			}
 		}
@@ -4325,25 +4325,24 @@ void ScriptValuesBase::loadBase(const YAML::YamlNodeReader& reader, const Script
 /**
  * Save values to yaml file.
  */
-void ScriptValuesBase::saveBase(YAML::YamlNodeWriter& writer, const ScriptGlobal* shared, ArgEnum type, const std::string& nodeName) const
+void ScriptValuesBase::saveBase(YAML::Node &node, const ScriptGlobal* shared, ArgEnum type, const std::string& nodeName) const
 {
-	bool hasTags = false; // We have to know whether the object has any tags before creating a "tags" child node in the yaml
-	for (size_t i = values.size(); i > 0 &&!hasTags; --i) // It's usually the last one
-		if (getBase(i))
-			hasTags = true;
-	if (!hasTags)
-		return;
-	YAML::YamlNodeWriter tags = writer[writer.saveString(nodeName)];
-	tags.setAsMap();
+	bool haveData = false;
+	YAML::Node tags;
 	for (size_t i = 1; i <= values.size(); ++i)
 	{
 		if (int v = getBase(i))
 		{
-			ScriptGlobal::TagValueData data = shared->getTagValueData(type, i);
-			std::string tagName = data.name.substr(data.name.find('.') + 1u).toString();
-			YAML::YamlNodeWriter temp = tags[tags.saveString(tagName)];
+			haveData = true;
+			auto temp = YAML::Node{};
+			auto data = shared->getTagValueData(type, i);
 			shared->getTagValueTypeData(data.valueType).save(shared, v, temp);
+			tags[data.name.substr(data.name.find('.') + 1u).toString()] = temp;
 		}
+	}
+	if (haveData)
+	{
+		node[nodeName] = tags;
 	}
 }
 
@@ -4358,16 +4357,16 @@ ScriptGlobal::ScriptGlobal()
 {
 	addTagValueTypeBase(
 		"int",
-		[](const ScriptGlobal* s, int& value, const YAML::YamlNodeReader& reader)
+		[](const ScriptGlobal* s, int& value, const YAML::Node& node)
 		{
-			if (reader)
+			if (node)
 			{
-				value = reader.readVal<int>();
+				value = node.as<int>();
 			}
 		},
-		[](const ScriptGlobal* s, const int& value, YAML::YamlNodeWriter& writer)
+		[](const ScriptGlobal* s, const int& value, YAML::Node& node)
 		{
-			writer.setValue(value);
+			node = value;
 		}
 	);
 }
@@ -4570,20 +4569,20 @@ void ScriptGlobal::endLoad()
 /**
  * Load global data from YAML.
  */
-void ScriptGlobal::load(const YAML::YamlNodeReader& reader)
+void ScriptGlobal::load(const YAML::Node& node)
 {
-	if (const YAML::YamlNodeReader& t = reader["tags"])
+	if (const YAML::Node& t = node["tags"])
 	{
 		for (auto& p : _tagNames)
 		{
 			const auto nodeName = p.second.name.toString();
-			const YAML::YamlNodeReader& tags = t[ryml::to_csubstr(nodeName)];
-			if (tags && tags.isMap())
+			const YAML::Node &tags = t[nodeName];
+			if (tags && tags.IsMap())
 			{
-				for (const YAML::YamlNodeReader& tag : tags.children())
+				for (const std::pair<YAML::Node, YAML::Node>& i : tags)
 				{
-					auto type = tag.readVal<std::string>();
-					auto name = tag.readKey<std::string>();
+					auto type = i.second.as<std::string>();
+					auto name = i.first.as<std::string>();
 					auto invalidType = _tagValueTypes.size();
 					auto valueType = invalidType;
 					for (size_t typei = 0; typei < invalidType; ++typei)
@@ -4603,18 +4602,18 @@ void ScriptGlobal::load(const YAML::YamlNodeReader& reader)
 							Log(LOG_ERROR) << "Script variable '" + name + "' already used in '" + _tagNames[ref->type].name.toString() + "'.";
 							continue;
 						}
-						auto tagOffset = getTag(p.first, ScriptRef::tempFrom(namePrefix));
-						if (tagOffset)
+						auto tag = getTag(p.first, ScriptRef::tempFrom(namePrefix));
+						if (tag)
 						{
-							auto data = getTagValueData(p.first, tagOffset);
+							auto data = getTagValueData(p.first, tag);
 							if (valueType != data.valueType)
 							{
 								Log(LOG_ERROR) << "Script variable '" + name + "' have wrong type '" << _tagValueTypes[valueType].name.toString() << "' instead of '" << _tagValueTypes[data.valueType].name.toString() << "' in '" + nodeName + "'.";
 							}
 							continue;
 						}
-						tagOffset = addTag(p.first, addNameRef(namePrefix), valueType);
-						if (!tagOffset)
+						tag = addTag(p.first, addNameRef(namePrefix), valueType);
+						if (!tag)
 						{
 							Log(LOG_ERROR) << "Script variable '" + name + "' exceeds limit of " << (int)p.second.limit << " available variables in '" + nodeName + "'.";
 							continue;
@@ -4628,7 +4627,7 @@ void ScriptGlobal::load(const YAML::YamlNodeReader& reader)
 			}
 		}
 	}
-	if (const YAML::YamlNodeReader& s = reader["scripts"])
+	if (const YAML::Node& s = node["scripts"])
 	{
 		for (auto& p : _parserNames)
 		{

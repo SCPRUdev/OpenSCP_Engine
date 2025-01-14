@@ -18,7 +18,7 @@
  */
 #include "SaveConverter.h"
 #include <algorithm>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include <SDL_endian.h>
 #include <fstream>
 #include <sstream>
@@ -513,10 +513,9 @@ void SaveConverter::loadDatZonal()
 	{
 		chances[_rules->getRegions()[i]] = load<Uint8>(data + i);
 	}
-	YAML::YamlRootNodeWriter writer;
-	writer.setAsMap();
-	writer.write("regions", chances);
-	_save->getAlienStrategy().load(writer.toReader(), _mod);
+	YAML::Node node;
+	node["regions"] = chances;
+	_save->getAlienStrategy().load(node, _mod);
 }
 
 /**
@@ -539,21 +538,15 @@ void SaveConverter::loadDatActs()
 		chances[_rules->getRegions()[region]][_rules->getMissions()[mission]] = load<Uint8>(data + i);
 	}
 
-	YAML::YamlRootNodeWriter writer;
-	writer.setAsMap();
-	if (!chances.empty())
+	YAML::Node node;
+	for (auto i = chances.begin(); i != chances.end(); ++i)
 	{
-		auto possibleMisions = writer["possibleMissions"];
-		possibleMisions.setAsSeq();
-		for (const auto& keyMapPair : chances)
-		{
-			auto regionAndMissions = possibleMisions.write();
-			regionAndMissions.setAsMap();
-			regionAndMissions.write("region", keyMapPair.first);
-			regionAndMissions.write("missions", keyMapPair.second);
-		}
+		YAML::Node subnode;
+		subnode["region"] = i->first;
+		subnode["missions"] = i->second;
+		node["possibleMissions"].push_back(subnode);
 	}
-	_save->getAlienStrategy().load(writer.toReader(), _mod);
+	_save->getAlienStrategy().load(node, _mod);
 }
 
 /**
@@ -580,15 +573,14 @@ void SaveConverter::loadDatMissions()
 			int mission = i % MISSIONS;
 			int region = i / MISSIONS;
 
-			YAML::YamlRootNodeWriter writer;
-			writer.setAsMap();
+			YAML::Node node;
 			AlienMission *m = new AlienMission(*_mod->getAlienMission(_rules->getMissions()[mission], true));
-			writer.write("region", _rules->getRegions()[region]);
-			writer.write("race", _rules->getCrews()[race]);
-			writer.write("nextWave", wave);
-			writer.write("nextUfoCounter", ufoCounter);
-			writer.write("spawnCountdown", spawn * 30);
-			writer.write("uniqueID", _save->getId("ALIEN_MISSIONS"));
+			node["region"] = _rules->getRegions()[region];
+			node["race"] = _rules->getCrews()[race];
+			node["nextWave"] = wave;
+			node["nextUfoCounter"] = ufoCounter;
+			node["spawnCountdown"] = spawn * 30;
+			node["uniqueID"] = _save->getId("ALIEN_MISSIONS");
 			if (m->getRules().getObjective() == OBJECTIVE_SITE)
 			{
 				int missionZone = 3; // pick a city for terror missions
@@ -598,9 +590,9 @@ void SaveConverter::loadDatMissions()
 					// try to account for TFTD's artefacts and such
 					missionZone = 0;
 				}
-				writer.write("missionSiteZone", RNG::generate(0, rule->getMissionZones().at(missionZone).areas.size() - 1));
+				node["missionSiteZone"] = RNG::generate(0, rule->getMissionZones().at(missionZone).areas.size() - 1);
 			}
-			m->load(writer.toReader(), *_save, _mod);
+			m->load(node, *_save, _mod);
 			_save->getAlienMissions().push_back(m);
 			_missions[std::make_pair(mission, region)] = m;
 		}
@@ -891,8 +883,7 @@ void SaveConverter::loadDatCraft()
 		int type = load<Uint8>(cdata);
 		if (type != 0xFF)
 		{
-			YAML::YamlRootNodeWriter writer;
-			writer.setAsMap();
+			YAML::Node node;
 			Craft *craft = dynamic_cast<Craft*>(_targets[i]);
 			if (craft != 0)
 			{
@@ -914,12 +905,12 @@ void SaveConverter::loadDatCraft()
 					craft->getWeapons()->at(1) = cw;
 				}
 
-				writer.write("damage", (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_DAMAGE")));
-				writer.write("speed", (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_SPEED")));
+				node["damage"] = (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_DAMAGE"));
+				node["speed"] = (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_SPEED"));
 				int dest = load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_DESTINATION"));
-				writer.write("fuel", (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_FUEL")));
+				node["fuel"] = (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_FUEL"));
 				int base = load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_BASE"));
-				writer.write("status", xcomStatus[load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_STATUS"))]);
+				node["status"] = xcomStatus[load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_STATUS"))];
 
 				// vehicles
 				const size_t VEHICLES = 5;
@@ -945,9 +936,9 @@ void SaveConverter::loadDatCraft()
 				}
 
 				std::bitset<7> state(load<int>(cdata + _rules->getOffset("CRAFT.DAT_STATE")));
-				writer.write("lowFuel", state.test(1));
+				node["lowFuel"] = state.test(1);
 
-				craft->load(writer.toReader(), _mod->getScriptGlobal(), _mod, _save);
+				craft->load(node, _mod->getScriptGlobal(), _mod, _save);
 
 				if (flight != 0 && dest != 0xFFFF)
 				{
@@ -966,13 +957,11 @@ void SaveConverter::loadDatCraft()
 			if (ufo != 0)
 			{
 				ufo->changeRules(_mod->getUfo(_rules->getUfos()[type - 5], true));
-				writer.write("damage", (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_DAMAGE")));
-				writer.write("altitude", xcomAltitudes[load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_ALTITUDE"))]);
-				writer.write("speed", (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_SPEED")));
-				auto destWriter = writer["dest"];
-				destWriter.setAsMap();
-				destWriter.write("lon", Xcom2Rad(load<Sint16>(cdata + _rules->getOffset("CRAFT.DAT_DEST_LON"))));
-				destWriter.write("lat", Xcom2Rad(load<Sint16>(cdata + _rules->getOffset("CRAFT.DAT_DEST_LAT"))));
+				node["damage"] = (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_DAMAGE"));
+				node["altitude"] = xcomAltitudes[load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_ALTITUDE"))];
+				node["speed"] = (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_SPEED"));
+				node["dest"]["lon"] = Xcom2Rad(load<Sint16>(cdata + _rules->getOffset("CRAFT.DAT_DEST_LON")));
+				node["dest"]["lat"] = Xcom2Rad(load<Sint16>(cdata + _rules->getOffset("CRAFT.DAT_DEST_LAT")));
 
 				int mission = load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_MISSION"));
 				int region = load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_REGION"));
@@ -980,16 +969,15 @@ void SaveConverter::loadDatCraft()
 				AlienMission *m = _missions[std::make_pair(mission, region)];
 				if (m == 0)
 				{
-					YAML::YamlRootNodeWriter missionWriter;
-					missionWriter.setAsMap();
+					YAML::Node subnode;
 					m = new AlienMission(*_mod->getAlienMission(_rules->getMissions()[mission], true));
-					missionWriter.write("region", _rules->getRegions()[region]);
-					missionWriter.write("race", _rules->getCrews()[load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_RACE"))]);
-					missionWriter.write("nextWave", 1);
-					missionWriter.write("nextUfoCounter", 0);
-					missionWriter.write("spawnCountdown", 1000);
-					missionWriter.write("uniqueID", _save->getId("ALIEN_MISSIONS"));
-					m->load(missionWriter.toReader(), *_save, _mod);
+					subnode["region"] = _rules->getRegions()[region];
+					subnode["race"] = _rules->getCrews()[load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_RACE"))];
+					subnode["nextWave"] = 1;
+					subnode["nextUfoCounter"] = 0;
+					subnode["spawnCountdown"] = 1000;
+					subnode["uniqueID"] = _save->getId("ALIEN_MISSIONS");
+					m->load(subnode, *_save, _mod);
 					_save->getAlienMissions().push_back(m);
 					_missions[std::make_pair(mission, region)] = m;
 					if (mission == 6)
@@ -997,18 +985,18 @@ void SaveConverter::loadDatCraft()
 						trajectory << UfoTrajectory::RETALIATION_ASSAULT_RUN;
 					}
 				}
-				writer.write("mission", m->getId());
+				node["mission"] = m->getId();
 				m->increaseLiveUfos();
 				if (trajectory.str().empty())
 				{
 					trajectory << "P" << load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_TRAJECTORY"));
 				}
-				writer.write("trajectory", trajectory.str());
-				writer.write("trajectoryPoint", (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_TRAJECTORY_POINT")));
+				node["trajectory"] = trajectory.str();
+				node["trajectoryPoint"] = (int)load<Uint16>(cdata + _rules->getOffset("CRAFT.DAT_TRAJECTORY_POINT"));
 				std::bitset<7> state(load<int>(cdata + _rules->getOffset("CRAFT.DAT_STATE")));
-				writer.write("hyperDetected", state.test(6));
+				node["hyperDetected"] = state.test(6);
 
-				ufo->load(writer.toReader(), _mod->getScriptGlobal(), *_mod, *_save);
+				ufo->load(node, _mod->getScriptGlobal(), *_mod, *_save);
 				ufo->setSpeed(ufo->getSpeed());
 				if (ufo->getStatus() == Ufo::CRASHED)
 				{
@@ -1046,15 +1034,14 @@ void SaveConverter::loadDatSoldier()
 		int rank = load<Uint16>(sdata + _rules->getOffset("SOLDIER.DAT_RANK"));
 		if (rank != 0xFFFF)
 		{
-			YAML::YamlRootNodeWriter writer;
-			writer.setAsMap();
+			YAML::Node node;
 			int base = load<Uint16>(sdata + _rules->getOffset("SOLDIER.DAT_BASE"));
 			int craft = load<Uint16>(sdata + _rules->getOffset("SOLDIER.DAT_CRAFT"));
-			writer.write("missions", (int)load<Sint16>(sdata + _rules->getOffset("SOLDIER.DAT_MISSIONS")));
-			writer.write("kills", (int)load<Sint16>(sdata + _rules->getOffset("SOLDIER.DAT_KILLS")));
-			writer.write("recovery", (int)load<Sint16>(sdata + _rules->getOffset("SOLDIER.DAT_RECOVERY")));
-			writer.write("name", load<std::string>(sdata + _rules->getOffset("SOLDIER.DAT_NAME")));
-			writer.write("rank", rank);
+			node["missions"] = (int)load<Sint16>(sdata + _rules->getOffset("SOLDIER.DAT_MISSIONS"));
+			node["kills"] = (int)load<Sint16>(sdata + _rules->getOffset("SOLDIER.DAT_KILLS"));
+			node["recovery"] = (int)load<Sint16>(sdata + _rules->getOffset("SOLDIER.DAT_RECOVERY"));
+			node["name"] = load<std::string>(sdata + _rules->getOffset("SOLDIER.DAT_NAME"));
+			node["rank"] = rank;
 
 			UnitStats initial;
 			initial.tu = load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_INITIAL_TU"));
@@ -1068,7 +1055,7 @@ void SaveConverter::loadDatSoldier()
 			initial.psiStrength = load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_INITIAL_PST"));
 			initial.psiSkill = load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_INITIAL_PSK"));
 			initial.bravery = 110 - (10 * load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_INITIAL_BR")));
-			writer.write("initialStats", initial);
+			node["initialStats"] = initial;
 
 			UnitStats current;
 			current.tu = load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_IMPROVED_TU"));
@@ -1083,26 +1070,26 @@ void SaveConverter::loadDatSoldier()
 			current.psiSkill = 0;
 			current.bravery = 10 * load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_IMPROVED_BR"));
 			current += initial;
-			writer.write("currentStats", current);
+			node["currentStats"] = current;
 
 			int armor = load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_ARMOR"));
 			const std::vector<std::string> &armors = _rules->getArmor();
 			if (armor >= 0 && armor < (int)armors.size())
 			{
-				writer.write("armor", armors[armor]);
+				node["armor"] = armors[armor];
 			}
 			else
 			{
 				throw Exception("Invalid armor index. Modded saves are not supported.");
 			}
-			writer.write("improvement", (int)load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_PSI")));
-			writer.write("psiTraining", (int)load<char>(sdata + _rules->getOffset("SOLDIER.DAT_PSILAB")) != 0);
-			writer.write("gender", (int)load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_GENDER")));
-			writer.write("look", (int)load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_LOOK")));
-			writer.write("id", _save->getId("STR_SOLDIER"));
+			node["improvement"] = (int)load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_PSI"));
+			node["psiTraining"] = (int)load<char>(sdata + _rules->getOffset("SOLDIER.DAT_PSILAB")) != 0;
+			node["gender"] = (int)load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_GENDER"));
+			node["look"] = (int)load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_LOOK"));
+			node["id"] = _save->getId("STR_SOLDIER");
 
 			Soldier *soldier = new Soldier(_mod->getSoldier(_mod->getSoldiersList().front(), true), nullptr, 0 /*nationality*/);
-			soldier->load(writer.toReader(), _mod, _save, _mod->getScriptGlobal());
+			soldier->load(node, _mod, _save, _mod->getScriptGlobal());
 			if (base != 0xFFFF)
 			{
 				Base *b = dynamic_cast<Base*>(_targets[base]);

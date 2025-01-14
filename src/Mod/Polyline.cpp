@@ -45,12 +45,12 @@ Polyline::~Polyline()
  * Loads the polyline from a YAML file.
  * @param node YAML node.
  */
-void Polyline::load(const YAML::YamlNodeReader& reader)
+void Polyline::load(const YAML::Node &node)
 {
 	delete[] _lat;
 	delete[] _lon;
 
-	std::vector<double> coords = reader.readVal<std::vector<double> >();
+	std::vector<double> coords = node.as< std::vector<double> >();
 	_points = coords.size() / 2;
 	_lat = new double[_points];
 	_lon = new double[_points];

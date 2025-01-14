@@ -156,7 +156,6 @@ private:
 	int _toggleBrightness;
 	int _monthsPassed;
 	int _daysPassed;
-	int _vehiclesLost;
 	std::string _graphRegionToggles;
 	std::string _graphCountryToggles;
 	std::string _graphFinanceToggles;
@@ -189,8 +188,8 @@ public:
 	static std::vector<SaveInfo> getList(Language *lang, bool autoquick);
 	/// Loads a saved game from YAML.
 	void load(const std::string &filename, Mod *mod, Language *lang);
-	void loadTemplates(const YAML::YamlNodeReader& reader, const Mod* mod);
-	void loadUfopediaRuleStatus(const YAML::YamlNodeReader& reader);
+	void loadTemplates(const YAML::Node& doc, const Mod* mod);
+	void loadUfopediaRuleStatus(const YAML::Node& node);
 	/// Saves a saved game to YAML.
 	void save(const std::string &filename, Mod *mod) const;
 	/// Gets the game name.
@@ -287,8 +286,8 @@ public:
 	const RuleResearch* selectGetOneFree(const RuleResearch* research);
 	/// Remove a research from the "already discovered" list
 	void removeDiscoveredResearch(const RuleResearch *research);
-	/// Make all research discovered (used in New Battle)
-	void makeAllResearchDiscovered(const Mod* mod);
+	/// Add a finished ResearchProject
+	void addFinishedResearchSimple(const RuleResearch *research);
 	/// Add a finished ResearchProject
 	void addFinishedResearch(const RuleResearch *research, const Mod *mod, Base *base, bool score = true);
 	/// Get the list of already discovered research projects
@@ -420,9 +419,6 @@ public:
 	/// Return the day counter.
 	int getDaysPassed() const { return _daysPassed; }
 	void increaseDaysPassed() { _daysPassed++; }
-	/// Return the vehicles lost counter.
-	int getVehiclesLost() const { return _vehiclesLost; }
-	void increaseVehiclesLost() { _vehiclesLost++; }
 	/// Return the GraphRegionToggles.
 	const std::string &getGraphRegionToggles() const;
 	/// Return the GraphCountryToggles.

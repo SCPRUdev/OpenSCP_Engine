@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -38,7 +38,7 @@ public:
 	/// Cleans up the polyline.
 	~Polyline();
 	/// Loads the polyline from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Gets the latitude of a point.
 	double getLatitude(int i) const;
 	/// Sets the latitude of a point.

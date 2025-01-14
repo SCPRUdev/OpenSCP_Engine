@@ -19,7 +19,7 @@
  */
 #include "Target.h"
 #include <string>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -49,9 +49,9 @@ public:
 	/// Cleans up the mission site.
 	~MissionSite();
 	/// Loads the mission site from YAML.
-	void load(const YAML::YamlNodeReader& reader) override;
+	void load(const YAML::Node& node) override;
 	/// Saves the mission site to YAML.
-	void save(YAML::YamlNodeWriter writer) const override;
+	YAML::Node save() const override;
 	/// Gets the waypoint's type.
 	std::string getType() const override;
 	/// Gets the mission site's ruleset.

@@ -43,18 +43,18 @@ RuleItemCategory::~RuleItemCategory()
  * @param mod Mod for the item.
  * @param listOrder The list weight for this item.
  */
-void RuleItemCategory::load(const YAML::YamlNodeReader& reader, Mod *mod)
+void RuleItemCategory::load(const YAML::Node &node, Mod *mod)
 {
-	if (const auto& parent = reader["refNode"])
+	if (const YAML::Node &parent = node["refNode"])
 	{
 		load(parent, mod);
 	}
 
-	reader.tryRead("replaceBy", _replaceBy);
-	reader.tryRead("hidden", _hidden);
+	_replaceBy = node["replaceBy"].as<std::string>(_replaceBy);
+	_hidden = node["hidden"].as<bool>(_hidden);
 
-	reader.tryRead("listOrder", _listOrder);
-	mod->loadUnorderedNames(_type, _invOrder, reader["invOrder"]);
+	_listOrder = node["listOrder"].as<int>(_listOrder);
+	mod->loadUnorderedNames(_type, _invOrder, node["invOrder"]);
 }
 
 /**

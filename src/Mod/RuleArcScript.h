@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "../Savegame/WeightedOptions.h"
 
 namespace OpenXcom
@@ -49,7 +49,7 @@ public:
 	/// Deletes an arc script.
 	~RuleArcScript();
 	/// Loads an arc script from yaml.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Gets the name of the script command.
 	const std::string &getType() const { return _type; }
 	/// Gets the sequential arcs list.

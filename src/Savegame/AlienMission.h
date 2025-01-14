@@ -18,7 +18,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <string>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -65,9 +65,9 @@ public:
 	/// Cleans up the mission info.
 	~AlienMission();
 	/// Loads the mission from YAML.
-	void load(const YAML::YamlNodeReader& reader, SavedGame &game, const Mod* mod);
+	void load(const YAML::Node& node, SavedGame &game, const Mod* mod);
 	/// Saves the mission to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Gets the mission's ruleset.
 	const RuleAlienMission &getRules() const { return _rule; }
 	/// Gets the mission's region.

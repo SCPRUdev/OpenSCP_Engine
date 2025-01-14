@@ -18,7 +18,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <string>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -32,7 +32,7 @@ private:
 public:
 	RuleMusic(const std::string &type);
 	~RuleMusic();
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node &node);
 	const std::string& getName() const;
 	int getCatPos() const;
 	float getNormalization() const;

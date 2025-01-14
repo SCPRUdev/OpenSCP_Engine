@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "../Engine/Functions.h"
 
 namespace OpenXcom
@@ -164,7 +164,7 @@ struct RuleDamageType
 	/// Do this damage type affect only one target
 	bool isDirect() const;
 	/// Loads item data from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 
 	/// Get final damage value to health based on damage before armor reduction.
 	int getHealthPreFinalDamage(int damage) const;

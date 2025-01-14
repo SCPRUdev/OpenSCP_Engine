@@ -18,7 +18,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <string>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -45,9 +45,9 @@ public:
 	/// Cleans up the ingame time.
 	~GameTime();
 	/// Loads the time from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node& node);
 	/// Saves the time to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Checks if it is the last day of the month.
 	bool isLastDayOfMonth();
 	/// Advances the time by 5 seconds.

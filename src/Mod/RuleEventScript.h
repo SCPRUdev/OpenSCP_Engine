@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "../Savegame/WeightedOptions.h"
 
 namespace OpenXcom
@@ -52,7 +52,7 @@ public:
 	/// Cleans up the event script ruleset.
 	~RuleEventScript();
 	/// Loads an event script from YAML.
-	void load(const YAML::YamlNodeReader& reader);
+	void load(const YAML::Node &node);
 	/// Gets the name of the script command.
 	const std::string &getType() const { return _type; }
 	/// Gets the list of all events (with weights).

@@ -241,12 +241,8 @@ namespace CrossPlatform
 	bool writeFile(const std::string& filename, const std::vector<unsigned char>& data);
 	/// Reads in a file
 	std::unique_ptr<std::istream> readFile(const std::string& filename);
-	/// Reads in a file
-	RawData readFileRaw(const std::string& filename);
 	/// Reads file until "\n---" sequence is met or to the end. To be used only for savegames.
 	std::unique_ptr<std::istream> getYamlSaveHeader (const std::string& filename);
-	/// Reads file until "\n---" sequence is met or to the end. To be used only for savegames.
-	RawData getYamlSaveHeaderRaw(const std::string& filename);
 	/// Flashes the game window.
 	void flashWindow();
 	/// Gets the DOS-style executable path.
@@ -278,10 +274,6 @@ namespace CrossPlatform
 	bool isHigherThanCurrentVersion(const std::string& newVersion);
 	/// Is the given version number higher than the given version number?
 	bool isHigherThanCurrentVersion(const std::array<int, 4>& newVersion, const int (&ver)[4]);
-	/// Is the given version number lower than the minimum required version number?
-	bool isLowerThanRequiredVersion(const std::string& dataVersion);
-	/// Is the first version number lower than the second version number?
-	bool isLowerThanRequiredVersion(const std::array<int, 4>& dataVersion, const int(&ver)[4]);
 	/// Gets the path to the executable file.
 	std::string getExeFolder();
 	/// Gets the file name of the executable file.

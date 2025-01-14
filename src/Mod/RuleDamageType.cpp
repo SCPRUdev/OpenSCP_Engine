@@ -172,62 +172,58 @@ bool RuleDamageType::isDirect() const
  * Load rule from YAML.
  * @param node Node with data.
  */
-void RuleDamageType::load(const YAML::YamlNodeReader& node)
+void RuleDamageType::load(const YAML::Node& node)
 {
+	FixRadius = node["FixRadius"].as<int>(FixRadius);
+	RandomType = (ItemDamageRandomType)node["RandomType"].as<int>(RandomType);
+	ResistType = (ItemDamageType)node["ResistType"].as<int>(ResistType);
+	FireBlastCalc = node["FireBlastCalc"].as<bool>(FireBlastCalc);
+	IgnoreDirection = node["IgnoreDirection"].as<bool>(IgnoreDirection);
+	IgnoreSelfDestruct = node["IgnoreSelfDestruct"].as<bool>(IgnoreSelfDestruct);
+	IgnorePainImmunity = node["IgnorePainImmunity"].as<bool>(IgnorePainImmunity);
+	IgnoreNormalMoraleLose = node["IgnoreNormalMoraleLose"].as<bool>(IgnoreNormalMoraleLose);
+	IgnoreOverKill = node["IgnoreOverKill"].as<bool>(IgnoreOverKill);
+	ArmorEffectiveness = node["ArmorEffectiveness"].as<float>(ArmorEffectiveness);
+	RadiusEffectiveness = node["RadiusEffectiveness"].as<float>(RadiusEffectiveness);
+	RadiusReduction = node["RadiusReduction"].as<float>(RadiusReduction);
 
-	const auto& reader = node.useIndex();
-	reader.tryRead("FixRadius", FixRadius);
-	reader.tryRead("RandomType", RandomType);
-	reader.tryRead("ResistType", ResistType);
-	reader.tryRead("FireBlastCalc", FireBlastCalc);
-	reader.tryRead("IgnoreDirection", IgnoreDirection);
-	reader.tryRead("IgnoreSelfDestruct", IgnoreSelfDestruct);
-	reader.tryRead("IgnorePainImmunity", IgnorePainImmunity);
-	reader.tryRead("IgnoreNormalMoraleLose", IgnoreNormalMoraleLose);
-	reader.tryRead("IgnoreOverKill", IgnoreOverKill);
-	reader.tryRead("ArmorEffectiveness", ArmorEffectiveness);
-	reader.tryRead("RadiusEffectiveness", RadiusEffectiveness);
-	reader.tryRead("RadiusReduction", RadiusReduction);
+	FireThreshold = node["FireThreshold"].as<float>(FireThreshold);
+	SmokeThreshold = node["SmokeThreshold"].as<float>(SmokeThreshold);
 
-	reader.tryRead("FireThreshold", FireThreshold);
-	reader.tryRead("SmokeThreshold", SmokeThreshold);
-  
-  reader.tryRead("ToHealthPre", ToHealthPre);
-	reader.tryRead("ToHealth", ToHealth);
-	reader.tryRead("ToMana", ToMana);
-	reader.tryRead("ToArmor", ToArmor);
-	reader.tryRead("ToArmorPre", ToArmorPre);
-	reader.tryRead("ToWound", ToWound);
-	reader.tryRead("ToItem", ToItem);
-	reader.tryRead("ToTile", ToTile);
-  reader.tryRead("ToStunPre", ToStunPre);
-	reader.tryRead("ToStun", ToStun);
-  reader.tryRead("ToEnergyPre", ToEnergyPre);
-	reader.tryRead("ToEnergy", ToEnergy);
-  reader.tryRead("ToTimePre", ToTimePre);
-	reader.tryRead("ToTime", ToTime);
-  reader.tryRead("ToMoralePre", ToMoralePre);
-	reader.tryRead("ToMorale", ToMorale);
+	ToHealthPre = node["ToHealthPre"].as<float>(ToHealthPre);
+	ToHealth = node["ToHealth"].as<float>(ToHealth);
+	ToMana = node["ToMana"].as<float>(ToMana);
+	ToArmor = node["ToArmor"].as<float>(ToArmor);
+	ToArmorPre = node["ToArmorPre"].as<float>(ToArmorPre);
+	ToWound = node["ToWound"].as<float>(ToWound);
+	ToItem = node["ToItem"].as<float>(ToItem);
+	ToTile = node["ToTile"].as<float>(ToTile);
+	ToStunPre = node["ToStunPre"].as<float>(ToStunPre);
+	ToStun = node["ToStun"].as<float>(ToStun);
+	ToEnergyPre = node["ToEnergyPre"].as<float>(ToEnergyPre);
+	ToEnergy = node["ToEnergy"].as<float>(ToEnergy);
+	ToTimePre = node["ToTimePre"].as<float>(ToTimePre);
+	ToTime = node["ToTime"].as<float>(ToTime);
+	ToMoralePre = node["ToMoralePre"].as<float>(ToMoralePre);
+	ToMorale = node["ToMorale"].as<float>(ToMorale);
 
-  reader.tryRead("RandomHealthPre", RandomHealthPre);
-	reader.tryRead("RandomHealth", RandomHealth);
-	reader.tryRead("RandomMana", RandomMana);
-	reader.tryRead("RandomArmor", RandomArmor);
-	reader.tryRead("RandomArmorPre", RandomArmorPre);
-	reader.tryRead("RandomWound", RandomWound);
-	reader.tryRead("RandomItem", RandomItem);
-	reader.tryRead("RandomTile", RandomTile);
-	reader.tryRead("RandomStunPre", RandomStunPre);
-  reader.tryRead("RandomStun", RandomStun);
-  reader.tryRead("RandomEnergyPre", RandomEnergyPre);
-	reader.tryRead("RandomEnergy", RandomEnergy);
-  reader.tryRead("RandomTimePre", RandomTimePre);
-	reader.tryRead("RandomTime", RandomTime);
-  reader.tryRead("RandomMoralePre", RandomMoralePre);
-	reader.tryRead("RandomMorale", RandomMorale);
+	RandomHealthPre = node["RandomHealthPre"].as<bool>(RandomHealthPre);
+	RandomHealth = node["RandomHealth"].as<bool>(RandomHealth);
+	RandomMana = node["RandomMana"].as<bool>(RandomMana);
+	RandomArmor = node["RandomArmor"].as<bool>(RandomArmor);
+	RandomArmorPre = node["RandomArmorPre"].as<bool>(RandomArmorPre);
+	RandomWound = node["RandomWound"].as<bool>(RandomWound);
+	RandomItem = node["RandomItem"].as<bool>(RandomItem);
+	RandomTile = node["RandomTile"].as<bool>(RandomTile);
+	RandomStunPre = node["RandomStunPre"].as<bool>(RandomStunPre);
+	RandomStun = node["RandomStun"].as<bool>(RandomStun);
+	RandomEnergy = node["RandomEnergy"].as<bool>(RandomEnergy);
+	RandomTimePre = node["RandomTimePre"].as<bool>(RandomTimePre);
+	RandomTime = node["RandomTime"].as<bool>(RandomTime);
+	RandomMoralePre = node["RandomMoralePre"].as<bool>(RandomMoralePre);
+	RandomMorale = node["RandomMorale"].as<bool>(RandomMorale);
 
-	reader.tryRead("TileDamageMethod", TileDamageMethod);
-
+	TileDamageMethod = node["TileDamageMethod"].as<int>(TileDamageMethod);
 }
 
 namespace

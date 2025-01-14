@@ -12,7 +12,7 @@
 
 #include "OpenGL.h"
 #include <SDL.h>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 #include "Logger.h"
 #include "Surface.h"
@@ -262,16 +262,16 @@ bool OpenGL::set_shader(const char *source_yaml_filename)
 			return false;
 		}
 		{
-			auto reader = FileMap::getYAML(source_yaml_filename);
+			auto document = FileMap::getYAML(source_yaml_filename);
 
 			bool is_glsl;
-			std::string language = reader["language"].readVal<std::string>();
+			std::string language = document["language"].as<std::string>();
 			is_glsl = (language == "GLSL");
 
 
-			linear = reader["linear"].readVal(false); // some shaders want texture linear interpolation and some don't
-			std::string fragment_source = reader["fragment"].readVal<std::string>("");
-			std::string vertex_source = reader["vertex"].readVal<std::string>("");
+			linear = document["linear"].as<bool>(false); // some shaders want texture linear interpolation and some don't
+			std::string fragment_source = document["fragment"].as<std::string>("");
+			std::string vertex_source = document["vertex"].as<std::string>("");
 
 			if (is_glsl)
 			{
@@ -280,7 +280,8 @@ bool OpenGL::set_shader(const char *source_yaml_filename)
 			}
 			else
 			{
-				Log(LOG_ERROR) << "Unexpected shader language \"" << language << "\"";
+				Log(LOG_ERROR) << "Unexpected shader language \"" <<
+					document["language"].as<std::string>() << "\"";
 			}
 		}
 		glLinkProgram(glprogram);

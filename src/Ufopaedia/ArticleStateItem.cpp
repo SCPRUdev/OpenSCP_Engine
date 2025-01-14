@@ -80,9 +80,9 @@ namespace OpenXcom
 		}
 		else if (item->getBattleType() == BT_FIREARM || item->getBattleType() == BT_MELEE)
 		{
-			if (item->getClipSize() != 0 || item->getIgnoreAmmoPower())
+			if (item->getClipSize() != 0)
 			{
-				// correct info loaded already... weapon has built-in ammo or ignores ammo power bonuses
+				// correct info loaded already... weapon has built-in ammo
 			}
 			else
 			{
@@ -346,19 +346,12 @@ namespace OpenXcom
 			_txtAmmoClipSize[i]->setVisible(false);
 		}
 
-		auto addAmmoDamagePower = [&](int pos, const RuleItem *rule, const RuleItem* weaponRule)
+		auto addAmmoDamagePower = [&](int pos, const RuleItem *rule)
 		{
 			_txtAmmoType[pos]->setText(tr(getDamageTypeText(rule->getDamageType()->ResistType)));
 
 			ss.str("");ss.clear();
-			if (weaponRule->getIgnoreAmmoPower())
-			{
-				ss << weaponRule->getPower();
-			}
-			else
-			{
-				ss << rule->getPower();
-			}
+			ss << rule->getPower();
 			if (rule->getShotgunPellets())
 			{
 				ss << "x" << rule->getShotgunPellets();
@@ -385,7 +378,7 @@ namespace OpenXcom
 
 				if (ammo_data->empty())
 				{
-					addAmmoDamagePower(0, item, item);
+					addAmmoDamagePower(0, item);
 				}
 				else
 				{
@@ -403,7 +396,7 @@ namespace OpenXcom
 								continue;
 							}
 
-							addAmmoDamagePower(currShow, type, item);
+							addAmmoDamagePower(currShow, type);
 
 							type->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), _imageAmmo[currShow]);
 							_txtAmmoClipSize[currShow]->setValue(type->getClipSize());
@@ -429,7 +422,7 @@ namespace OpenXcom
 				_txtDamage->setAlign(ALIGN_CENTER);
 				_txtDamage->setText(tr("STR_DAMAGE_UC"));
 
-				addAmmoDamagePower(0, item, item);
+				addAmmoDamagePower(0, item);
 				break;
 			default: break;
 		}

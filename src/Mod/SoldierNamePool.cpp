@@ -46,36 +46,36 @@ SoldierNamePool::~SoldierNamePool()
  */
 void SoldierNamePool::load(const std::string &filename)
 {
-	YAML::YamlRootNodeReader reader = FileMap::getYAML(filename);
+	YAML::Node doc = FileMap::getYAML(filename);
 
-	for (const auto& nameReader : reader["maleFirst"].children())
+	for (YAML::const_iterator i = doc["maleFirst"].begin(); i != doc["maleFirst"].end(); ++i)
 	{
-		std::string name = nameReader.readVal<std::string>();
+		std::string name = i->as<std::string>();
 		_maleFirst.push_back(name);
 	}
-	for (const auto& nameReader : reader["femaleFirst"].children())
+	for (YAML::const_iterator i = doc["femaleFirst"].begin(); i != doc["femaleFirst"].end(); ++i)
 	{
-		std::string name = nameReader.readVal<std::string>();
+		std::string name = i->as<std::string>();
 		_femaleFirst.push_back(name);
 	}
-	for (const auto& nameReader : reader["maleLast"].children())
+	for (YAML::const_iterator i = doc["maleLast"].begin(); i != doc["maleLast"].end(); ++i)
 	{
-		std::string name = nameReader.readVal<std::string>();
+		std::string name = i->as<std::string>();
 		_maleLast.push_back(name);
 	}
-	for (const auto& nameReader : reader["femaleLast"].children())
+	for (YAML::const_iterator i = doc["femaleLast"].begin(); i != doc["femaleLast"].end(); ++i)
 	{
-		std::string name = nameReader.readVal<std::string>();
+		std::string name = i->as<std::string>();
 		_femaleLast.push_back(name);
 	}
-	for (const auto& nameReader : reader["maleCallsign"].children())
+	for (YAML::const_iterator i = doc["maleCallsign"].begin(); i != doc["maleCallsign"].end(); ++i)
 	{
-		std::string name = nameReader.readVal<std::string>();
+		std::string name = i->as<std::string>();
 		_maleCallsign.push_back(name);
 	}
-	for (const auto& nameReader : reader["femaleCallsign"].children())
+	for (YAML::const_iterator i = doc["femaleCallsign"].begin(); i != doc["femaleCallsign"].end(); ++i)
 	{
-		std::string name = nameReader.readVal<std::string>();
+		std::string name = i->as<std::string>();
 		_femaleCallsign.push_back(name);
 	}
 	if (_femaleCallsign.empty())
@@ -90,22 +90,22 @@ void SoldierNamePool::load(const std::string &filename)
 	{
 		_femaleLast = _maleLast;
 	}
-	reader.tryRead("lookWeights", _lookWeights);
+	_lookWeights = doc["lookWeights"].as< std::vector<int> >(_lookWeights);
 	_totalWeight = 0;
 	for (int lw : _lookWeights)
 	{
 		_totalWeight += lw;
 	}
-	reader.tryRead("femaleFrequency", _femaleFrequency);
-	reader.tryRead("globalWeight", _globalWeight);
+	_femaleFrequency = doc["femaleFrequency"].as<int>(_femaleFrequency);
+
+	_globalWeight = doc["globalWeight"].as<int>(_globalWeight);
 	if (_globalWeight <= 0)
 	{
 		// can't let the modders break this completely
 		_globalWeight = 100;
 	}
-
-	reader.tryRead("country", _country);
-	reader.tryRead("region", _region);
+	_country = doc["country"].as<std::string>(_country);
+	_region = doc["region"].as<std::string>(_region);
 }
 
 /**

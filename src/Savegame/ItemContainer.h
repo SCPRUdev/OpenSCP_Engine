@@ -19,7 +19,7 @@
  */
 #include <string>
 #include <map>
-#include "../Engine/Yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -42,9 +42,9 @@ public:
 	/// Cleans up the item container.
 	~ItemContainer();
 	/// Loads the item container from YAML.
-	void load(const YAML::YamlNodeReader& reader, const Mod* mod);
+	void load(const YAML::Node& node, const Mod* mod);
 	/// Saves the item container to YAML.
-	void save(YAML::YamlNodeWriter writer) const;
+	YAML::Node save() const;
 	/// Adds an item to the container.
 	void addItem(const std::string &id, int qty = 1) = delete;
 	/// Adds an item to the container.
